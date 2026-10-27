@@ -2,13 +2,13 @@
 
 A Manifest V3 Chrome extension that tracks listening activity on YouTube and YouTube Music. The popup ranks your most-played tracks for today, this week, this month, this year, or all time.
 
-The compact popup shows the local date, optional city-based weather, a beat-reactive music visualizer, and the top 5 tracks. Click the visualizer to open a draggable animation bar over the current YouTube page. Click **View full list** to open the searchable, paginated Song Library in a separate tab. The library opens to **Today** by default and can filter history to a specific date. On eligible YouTube watch pages, a local `N played` badge appears beside the Like control.
+The compact popup shows the local date, optional city-based weather, a beat-reactive music visualizer, and the top 5 tracks. Click the visualizer to open a draggable frosted-glass visualizer card over the current YouTube page. Click **View full list** to open the searchable, paginated Song Library in a separate tab. The library opens to **Today** by default and can filter history to a specific date. On eligible YouTube watch pages, a local `N played` badge appears beside the Like control.
 
 ## Demo
 
 ![Lazy Song Counter popup, top tracks, and draggable beat visualizer on YouTube](docs/demo.svg)
 
-Open the extension popup to see listening totals and your top five songs. Click the mini visualizer to open the thin, draggable beat bar on the YouTube page. Use **View full list** to browse the complete history. The image uses sample song data.
+Open the extension popup to see listening totals and your top five songs. Click the mini visualizer to open the draggable visualizer card on the YouTube page; hover over it to show its close button. Use **View full list** to browse the complete history. The image uses sample song data.
 
 ## Counting rules
 
@@ -24,7 +24,7 @@ Open the extension popup to see listening totals and your top five songs. Click 
 
 The popup shows today's date using the browser's local time zone. Choose a city to show its current weather; the date then follows that city's time zone. The extension does not request device location. Chrome only asks for the optional Open-Meteo city-search permission when **Find** is clicked. Rounded coordinates for the selected city are sent to the Open-Meteo forecast API; only the city name, weather, and time zone are cached locally. The readout links to Open-Meteo for attribution. Its free API tier is for non-commercial use.
 
-The visualizer reads frequency levels from the active YouTube player when the browser allows media capture. It does not route or change playback audio. If a page does not expose an audio signal, it uses a randomized rhythmic animation instead.
+The visualizer reads frequency levels from the active YouTube player when the browser allows media capture. It does not route or change playback audio. When YouTube loads a new video or an ad, the visualizer captures the audio again. If a page does not expose an audio signal, it uses a randomized rhythmic animation instead. If a YouTube tab was open before the extension was installed, reloaded, or updated, the popup adds the extension's scripts to it again (Chrome's `scripting` permission), so a page refresh is not needed.
 
 ## Google cloud backup
 
