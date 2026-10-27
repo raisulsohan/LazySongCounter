@@ -283,7 +283,7 @@
       left: "50%",
       transform: "translateX(-50%)",
       width: "min(960px, 86vw)",
-      height: "42px",
+      height: "18px",
       zIndex: "2147483647",
       cursor: "grab",
       touchAction: "none",
@@ -299,11 +299,11 @@
         width: 100%;
         height: 100%;
         overflow: hidden;
-        border: 1px solid rgba(195, 170, 255, .34);
-        border-radius: 13px;
-        background: rgba(16, 14, 25, .93);
-        box-shadow: 0 10px 34px rgba(0, 0, 0, .38), 0 0 24px rgba(137, 93, 245, .12);
-        backdrop-filter: blur(14px);
+        border: 1px solid rgba(205, 176, 255, .45);
+        border-radius: 999px;
+        background: linear-gradient(90deg, rgba(117, 82, 223, .24), rgba(176, 107, 255, .22) 48%, rgba(80, 200, 255, .22));
+        box-shadow: 0 3px 14px rgba(0, 0, 0, .3), 0 0 16px rgba(137, 93, 245, .2);
+        backdrop-filter: blur(10px);
         cursor: grab;
         touch-action: none;
         user-select: none;
@@ -314,7 +314,7 @@
     bar.className = "bar";
     const canvas = document.createElement("canvas");
     canvas.width = 960;
-    canvas.height = 42;
+    canvas.height = 18;
     canvas.setAttribute("role", "img");
     canvas.setAttribute("aria-label", "Music beat visualizer. Drag to move.");
     bar.append(canvas);

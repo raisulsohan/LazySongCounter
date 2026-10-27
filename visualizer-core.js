@@ -120,12 +120,13 @@
 
       const gap = Math.max(1.6, width * 0.014);
       const barWidth = Math.max(2, (width - gap * (BAND_COUNT - 1)) / BAND_COUNT);
-      const floor = height - 4;
-      const maxBarHeight = height - 11;
-      const gradient = context.createLinearGradient(0, floor, 0, 3);
-      gradient.addColorStop(0, "#7552df");
-      gradient.addColorStop(0.58, "#b06bff");
-      gradient.addColorStop(1, "#70dcff");
+      const floor = height - 2;
+      const maxBarHeight = Math.max(3, height - 6);
+      const gradient = context.createLinearGradient(0, 0, width, 0);
+      gradient.addColorStop(0, "#7654e8");
+      gradient.addColorStop(0.42, "#bd62f2");
+      gradient.addColorStop(0.72, "#7288ff");
+      gradient.addColorStop(1, "#45d8e8");
       context.fillStyle = gradient;
 
       for (let index = 0; index < BAND_COUNT; index += 1) {
@@ -142,7 +143,7 @@
 
       context.textAlign = "center";
       context.textBaseline = "middle";
-      this.particles.forEach((particle) => {
+      if (height > 24) this.particles.forEach((particle) => {
         context.globalAlpha = Math.max(0, Math.min(1, particle.life));
         context.fillStyle = "#d9c4ff";
         context.font = `600 ${particle.size}px system-ui, sans-serif`;
