@@ -1,4 +1,4 @@
-const STORAGE_KEY = "lazySongCounterData";
+const History = globalThis.LazySongHistory;
 const PERIODS = {
   daily: { label: "Today", summary: "Listens today" },
   weekly: { label: "This week", summary: "Listens this week" },
@@ -9,8 +9,9 @@ const PERIODS = {
 
 const numberFormat = new Intl.NumberFormat("en-US");
 let selectedPeriod = "daily";
-let allListens = [];
+let totalListens = 0;
 let currentTracks = [];
+let loadRequestId = 0;
 let toastTimer = 0;
 
 const listElement = document.querySelector("#track-list");
@@ -22,7 +23,7 @@ document.querySelectorAll(".periods button").forEach((button) => {
     document.querySelectorAll(".periods button").forEach((item) => {
       item.classList.toggle("active", item === button);
     });
-    render();
+    loadData();
   });
 });
 
@@ -34,7 +35,7 @@ document.querySelector("#view-all").addEventListener("click", () => {
 
 document.querySelector("#clear-history").addEventListener("click", async () => {
   const account = await sendBackgroundMessage({ type: "get-account-state" });
-  if (!allListens.length && !account?.signedIn) {
+  if (!totalListens && !account?.signedIn) {
     showToast("There is no history to clear.");
     return;
   }
@@ -47,21 +48,36 @@ document.querySelector("#clear-history").addEventListener("click", async () => {
     showToast(result?.error || "Could not clear listening history.");
     return;
   }
-  allListens = [];
-  render();
-  showToast("Listening history cleared.");
+  await loadData();
+  showToast(result.warning || "Listening history cleared.");
 });
 
 chrome.storage.onChanged.addListener((changes, areaName) => {
-  if (areaName !== "local" || !changes[STORAGE_KEY]) return;
-  allListens = changes[STORAGE_KEY].newValue?.listens || [];
-  render();
+  if (areaName === "local" && changes[History.INDEX_KEY]) loadData();
 });
 
+// "All time" comes from the per-track totals; other periods read only their months.
 async function loadData() {
+  const requestId = ++loadRequestId;
   try {
-    const result = await chrome.storage.local.get(STORAGE_KEY);
-    allListens = Array.isArray(result[STORAGE_KEY]?.listens) ? result[STORAGE_KEY].listens : [];
+    const start = rangeStart(selectedPeriod);
+    let tracks;
+    let total;
+    if (start) {
+      const listens = await History.readListensInRange(chrome.storage.local, start.getTime());
+      tracks = History.aggregate(listens);
+      total = listens.length;
+    } else {
+      const [trackMap, index] = await Promise.all([
+        History.readTrackMap(chrome.storage.local),
+        History.readIndex(chrome.storage.local)
+      ]);
+      tracks = History.tracksFromMap(trackMap);
+      total = index.total;
+    }
+    if (requestId !== loadRequestId) return;
+    currentTracks = tracks;
+    totalListens = total;
     render();
   } catch {
     showToast("Could not load history. Please try again.");
@@ -82,37 +98,9 @@ function rangeStart(period, now = new Date()) {
 }
 
 function render() {
-  const start = rangeStart(selectedPeriod);
-  const listens = allListens.filter((item) => {
-    const timestamp = Number(item.playedAt);
-    return Number.isFinite(timestamp) && (!start || timestamp >= start.getTime());
-  });
-
-  const grouped = new Map();
-  listens.forEach((item) => {
-    const key = item.trackKey || item.videoId || item.title;
-    const current = grouped.get(key) || {
-      key,
-      title: item.title || "Untitled track",
-      channel: item.channel || "",
-      videoId: item.videoId || "",
-      count: 0,
-      lastPlayed: 0
-    };
-    current.count += 1;
-    if (Number(item.playedAt) >= current.lastPlayed) {
-      current.lastPlayed = Number(item.playedAt);
-      current.title = item.title || current.title;
-      current.channel = item.channel || current.channel;
-      current.videoId = item.videoId || current.videoId;
-    }
-    grouped.set(key, current);
-  });
-
-  currentTracks = [...grouped.values()].sort((a, b) => b.count - a.count || b.lastPlayed - a.lastPlayed);
   document.querySelector("#summary-period").textContent = PERIODS[selectedPeriod].summary;
   document.querySelector("#period-chip").textContent = PERIODS[selectedPeriod].label;
-  document.querySelector("#total-listens").textContent = numberFormat.format(listens.length);
+  document.querySelector("#total-listens").textContent = numberFormat.format(totalListens);
   document.querySelector("#unique-tracks").textContent = numberFormat.format(currentTracks.length);
   listElement.replaceChildren();
   emptyElement.hidden = currentTracks.length > 0;

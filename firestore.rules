@@ -2,8 +2,37 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    function isText(value, maxLength) {
+      return value is string && value.size() <= maxLength;
+    }
+
+    function isValidListen(data) {
+      return data.keys().hasOnly(["trackKey", "title", "channel", "videoId", "playedAt", "uploadedAt"]) &&
+        data.keys().hasAll(["trackKey", "title", "channel", "videoId", "playedAt", "uploadedAt"]) &&
+        isText(data.trackKey, 240) && data.trackKey.size() > 0 &&
+        isText(data.title, 200) && data.title.size() > 0 &&
+        isText(data.channel, 120) &&
+        isText(data.videoId, 32) &&
+        data.playedAt is int && data.playedAt > 0 &&
+        data.uploadedAt == request.time;
+    }
+
     match /users/{userId}/listens/{listenId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, delete: if isOwner(userId);
+      allow create, update: if isOwner(userId) && listenId.size() <= 64 && isValidListen(request.resource.data);
+    }
+
+    // Holds the time of the account's last "Clear history" so every browser applies it.
+    match /users/{userId}/meta/state {
+      allow read: if isOwner(userId);
+      allow create, update: if isOwner(userId) &&
+        request.resource.data.keys().hasOnly(["clearedAt"]) &&
+        request.resource.data.clearedAt is int &&
+        request.resource.data.clearedAt >= 0;
     }
   }
 }

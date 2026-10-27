@@ -1,4 +1,4 @@
-const STORAGE_KEY = "lazySongCounterData";
+const History = globalThis.LazySongHistory;
 const PAGE_SIZE = 25;
 const PERIODS = {
   daily: { label: "Today", summary: "Listens today" },
@@ -15,8 +15,10 @@ const dateFormat = new Intl.DateTimeFormat("en-US", {
 });
 const dayFormat = new Intl.DateTimeFormat("en-US", { dateStyle: "medium" });
 let selectedPeriod = "daily";
-let allListens = [];
+let periodTracks = [];
+let periodTotal = 0;
 let page = 0;
+let loadRequestId = 0;
 
 const listElement = document.querySelector("#track-list");
 const emptyElement = document.querySelector("#empty-state");
@@ -34,21 +36,21 @@ document.querySelectorAll(".periods button").forEach((button) => {
     document.querySelectorAll(".periods button").forEach((item) => {
       item.classList.toggle("active", item === button);
     });
-    render();
+    loadData();
   });
 });
 
 dateElement.addEventListener("change", () => {
   page = 0;
   updateDateControls();
-  render();
+  loadData();
 });
 
 clearDateButton.addEventListener("click", () => {
   dateElement.value = "";
   page = 0;
   updateDateControls();
-  render();
+  loadData();
 });
 
 searchElement.addEventListener("input", () => {
@@ -72,15 +74,32 @@ document.querySelector("#next-page").addEventListener("click", () => {
 });
 
 chrome.storage.onChanged.addListener((changes, areaName) => {
-  if (areaName !== "local" || !changes[STORAGE_KEY]) return;
-  allListens = changes[STORAGE_KEY].newValue?.listens || [];
-  render();
+  if (areaName === "local" && changes[History.INDEX_KEY]) loadData();
 });
 
+// "All time" comes from the per-track totals; a period or a date reads only its months.
 async function loadData() {
+  const requestId = ++loadRequestId;
   try {
-    const result = await chrome.storage.local.get(STORAGE_KEY);
-    allListens = Array.isArray(result[STORAGE_KEY]?.listens) ? result[STORAGE_KEY].listens : [];
+    const selectedDate = selectedDateRange();
+    const start = selectedDate ? selectedDate.start : rangeStart(selectedPeriod)?.getTime();
+    let tracks;
+    let total;
+    if (start !== undefined) {
+      const listens = await History.readListensInRange(chrome.storage.local, start, selectedDate ? selectedDate.end : Infinity);
+      tracks = History.aggregate(listens);
+      total = listens.length;
+    } else {
+      const [trackMap, index] = await Promise.all([
+        History.readTrackMap(chrome.storage.local),
+        History.readIndex(chrome.storage.local)
+      ]);
+      tracks = History.tracksFromMap(trackMap);
+      total = index.total;
+    }
+    if (requestId !== loadRequestId) return;
+    periodTracks = tracks;
+    periodTotal = total;
     render();
   } catch {
     document.querySelector("#empty-title").textContent = "Could not load history";
@@ -125,50 +144,14 @@ function updateDateControls() {
   });
 }
 
-function getFilteredListens() {
-  const selectedDate = selectedDateRange();
-  const start = selectedDate ? null : rangeStart(selectedPeriod);
-  return allListens.filter((item) => {
-    const timestamp = Number(item.playedAt);
-    if (!Number.isFinite(timestamp)) return false;
-    if (selectedDate) return timestamp >= selectedDate.start && timestamp < selectedDate.end;
-    return !start || timestamp >= start.getTime();
-  });
-}
-
-function getVisibleTracks(applySearch = true) {
+function getVisibleTracks() {
   const query = searchElement.value.trim().toLocaleLowerCase();
-  const listens = getFilteredListens();
-  const grouped = new Map();
-
-  listens.forEach((item) => {
-    const key = item.trackKey || item.videoId || item.title;
-    const current = grouped.get(key) || {
-      key,
-      title: item.title || "Untitled track",
-      channel: item.channel || "",
-      videoId: item.videoId || "",
-      count: 0,
-      lastPlayed: 0
-    };
-    current.count += 1;
-    if (Number(item.playedAt) >= current.lastPlayed) {
-      current.lastPlayed = Number(item.playedAt);
-      current.title = item.title || current.title;
-      current.channel = item.channel || current.channel;
-      current.videoId = item.videoId || current.videoId;
-    }
-    grouped.set(key, current);
-  });
-
-  return [...grouped.values()]
-    .filter((track) => !applySearch || !query || `${track.title} ${track.channel}`.toLocaleLowerCase().includes(query))
-    .sort((a, b) => b.count - a.count || b.lastPlayed - a.lastPlayed);
+  if (!query) return periodTracks;
+  return periodTracks.filter((track) => `${track.title} ${track.channel}`.toLocaleLowerCase().includes(query));
 }
 
 function render() {
   const selectedDate = selectedDateRange();
-  const listensInPeriod = getFilteredListens();
   const tracks = getVisibleTracks();
   const totalPages = Math.max(1, Math.ceil(tracks.length / PAGE_SIZE));
   page = Math.min(page, totalPages - 1);
@@ -179,8 +162,8 @@ function render() {
   document.querySelector("#summary-period").textContent = selectedDate
     ? `Listens on ${selectedDate.label}`
     : PERIODS[selectedPeriod].summary;
-  document.querySelector("#total-listens").textContent = numberFormat.format(listensInPeriod.length);
-  document.querySelector("#unique-tracks").textContent = numberFormat.format(getVisibleTracks(false).length);
+  document.querySelector("#total-listens").textContent = numberFormat.format(periodTotal);
+  document.querySelector("#unique-tracks").textContent = numberFormat.format(periodTracks.length);
   document.querySelector("#result-count").textContent = `${numberFormat.format(tracks.length)} ${tracks.length === 1 ? "track" : "tracks"}`;
   document.querySelector("#range-label").textContent = tracks.length
     ? `Sorted by most played · ${selectedDate ? selectedDate.label : PERIODS[selectedPeriod].label}`

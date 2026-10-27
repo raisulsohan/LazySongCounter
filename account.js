@@ -168,4 +168,6 @@
   }
 
   void refreshState();
+  // Opening the popup or the library pulls new plays from other browsers (at most every few minutes).
+  send("sync-if-signed-in").catch(() => undefined);
 })();

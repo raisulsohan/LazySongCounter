@@ -1,10 +1,14 @@
 (() => {
+  const Rules = globalThis.LazySongRules;
   let currentVideoId = "";
   let currentVideo = null;
   let session = null;
   let syncTimer = 0;
+  let lastSyncAt = 0;
   let badgeTimer = 0;
   let badgeRequestId = 0;
+  // The last count read for the current video; used to redraw the badge without asking again.
+  let badgeState = null;
   let audioVideo = null;
   let audioCaptureStream = null;
   let audioContext = null;
@@ -16,7 +20,7 @@
   let previousBassLevel = 0;
   let lastBeatAt = 0;
   let floatingVisualizer = null;
-  const VISUALIZER_POSITION_KEY = "lazySongCounterVisualizerPosition";
+  const SYNC_THROTTLE_MS = 250;
   const metadataByVideoId = new Map();
 
   window.addEventListener("message", (event) => {
@@ -27,6 +31,7 @@
     const metadata = {
       category: message.category.slice(0, 80),
       title: typeof message.title === "string" ? message.title.slice(0, 200) : "",
+      author: typeof message.author === "string" ? message.author.slice(0, 120) : "",
       description: typeof message.description === "string" ? message.description.slice(0, 8000) : "",
       keywords: Array.isArray(message.keywords)
         ? message.keywords.filter((keyword) => typeof keyword === "string").slice(0, 80)
@@ -84,67 +89,23 @@
     return document.querySelector("video.html5-main-video") || document.querySelector("video");
   }
 
-  function cleanTitle(value) {
-    return String(value || "")
-      .replace(/\s*[-|]\s*YouTube(?: Music)?\s*$/i, "")
-      .replace(/\s+/g, " ")
-      .trim();
-  }
-
   function getTrackDetails(videoId) {
-    const title = cleanTitle(
+    // The player data for this exact video is the most reliable source. The page heading can still
+    // show the previous video for a moment after a navigation.
+    const metadata = metadataByVideoId.get(videoId);
+    const title = Rules.cleanTitle(
+      metadata?.title ||
       document.querySelector("ytd-watch-metadata h1 yt-formatted-string")?.textContent ||
       document.querySelector('meta[name="title"]')?.content ||
       document.title
     );
-    const channel = (document.querySelector("ytd-watch-metadata ytd-channel-name a")?.textContent ||
-      document.querySelector(".ytmusic-player-bar yt-formatted-string")?.textContent || "")
-      .replace(/\s+/g, " ")
-      .trim();
-    const normalizedTitle = title
-      .normalize("NFKC")
-      .toLocaleLowerCase()
-      .replace(/[\[\](){}.,!?\-_:;"'’]/g, " ")
+    const channel = (metadata?.author ||
+      document.querySelector("ytd-watch-metadata ytd-channel-name a")?.textContent ||
+      document.querySelector("ytmusic-player-bar .byline a")?.textContent || "")
       .replace(/\s+/g, " ")
       .trim();
 
-    return {
-      title,
-      channel,
-      videoId,
-      trackKey: normalizedTitle || videoId
-    };
-  }
-
-  function isClearlyNonSongTitle(title) {
-    return /\b(?:podcast|reaction|reacts?|review|tutorial|lesson|interview|commentary|analysis|breakdown|documentary|vlog|trailer|teaser|movie scene|deleted scene|full album|playlist|compilation|mixtape|behind the scenes|making of|how to)\b|রিভিউ|রিঅ্যাকশন|টিউটোরিয়াল|সাক্ষাৎকার|পডকাস্ট|বিশ্লেষণ|ডকুমেন্টারি|ভ্লগ/i.test(title);
-  }
-
-  function classifyMusicVideo(metadata) {
-    if (!metadata?.category) return "unknown";
-    const category = metadata.category.trim().toLocaleLowerCase();
-    if (category === "music") return "music";
-    if (category !== "entertainment" && category !== "people & blogs") return "not-music";
-
-    const title = metadata.title || "";
-    const description = metadata.description || "";
-    const keywords = Array.isArray(metadata.keywords) ? metadata.keywords : [];
-    if (!title || (!description && keywords.length === 0)) return "unknown";
-    if (isClearlyNonSongTitle(title)) return "not-music";
-
-    const trackTitleSignal = /\b(?:song|songs|theme|bgm|ost|soundtrack|music video|video song|lyrical video)\b/i.test(title);
-    const musicKeywordSignal = keywords.some((keyword) =>
-      /\b(?:song|songs|music video|video song|soundtrack|bgm|lyrical video)\b/i.test(keyword)
-    );
-    const musicMixSignal = /\b(?:lo[\s-]?fi|mashup|slowed\s*(?:&|and)\s*reverb)\b/i.test(title) &&
-      /\b(?:songs?|music|melodies|beats?|lo[\s-]?fi|mashup)\b/i.test(description);
-    const strongCreditSignal = /\b(?:music credits?|song title|song name|singer|vocals?|lyricist)\s*[-–—:]\s*\S|\b(?:composed|sung)\s+by\b|\b(?:lyrics?|music)\s*(?:by|[-–—:])\s*\S/i.test(description);
-    const officialListenLinkSignal = /\blisten to\b[\s\S]{0,240}\b(?:music service|spotify|apple music|amazon music|youtube music)\b/i.test(description);
-
-    return (strongCreditSignal || officialListenLinkSignal || musicMixSignal) &&
-      (trackTitleSignal || musicKeywordSignal || musicMixSignal)
-      ? "music"
-      : "not-music";
+    return { title, channel, videoId };
   }
 
   function isAdPlaying() {
@@ -335,11 +296,13 @@
       top: Math.max(0, Math.min(window.innerHeight - host.offsetHeight, top))
     });
 
+    // Extension storage is closed to content scripts, so the service worker keeps the position.
     const savePosition = () => {
       const left = parseFloat(host.style.left) || 0;
       const top = parseFloat(host.style.top) || 0;
-      chrome.storage.local.set({
-        [VISUALIZER_POSITION_KEY]: {
+      sendQuietly({
+        type: "set-visualizer-position",
+        position: {
           x: window.innerWidth ? left / window.innerWidth : 0.5,
           y: window.innerHeight ? top / window.innerHeight : 0.05
         }
@@ -347,9 +310,9 @@
     };
 
     const restorePosition = () => {
-      chrome.storage.local.get(VISUALIZER_POSITION_KEY, (result) => {
+      sendQuietly({ type: "get-visualizer-position" }, (result) => {
         if (floatingVisualizer?.host !== host) return;
-        const position = result[VISUALIZER_POSITION_KEY];
+        const position = result?.position;
         if (!position || !Number.isFinite(position.x) || !Number.isFinite(position.y)) return;
         const { left, top } = clampPosition(position.x * window.innerWidth, position.y * window.innerHeight);
         host.style.transform = "none";
@@ -482,30 +445,45 @@
     badgeTimer = window.setTimeout(updatePlayCountBadge, 150);
   }
 
+  function badgeTrackDetails(videoId) {
+    if (!videoId || videoId !== currentVideoId) return null;
+    if (Rules.classifyMusicVideo(metadataByVideoId.get(videoId)) !== "music") return null;
+    const details = getTrackDetails(videoId);
+    if (!details.title || Rules.isClearlyNonSongTitle(details.title)) return null;
+    return details;
+  }
+
+  function showBadge(videoId, count, title) {
+    badgeState = { videoId, count, title };
+    renderPlayCountBadge(count, title);
+  }
+
+  // Puts the known count back when YouTube re-renders its action bar. Sends no message.
+  function restoreBadge() {
+    if (!badgeState || badgeState.videoId !== currentVideoId) return;
+    const container = getLikeActionsContainer();
+    const badge = document.getElementById("lsc-play-count-badge");
+    if (container && badge?.parentElement !== container) renderPlayCountBadge(badgeState.count, badgeState.title);
+  }
+
   async function updatePlayCountBadge() {
     const requestId = ++badgeRequestId;
     const videoId = getVideoId();
-    if (!videoId || videoId !== currentVideoId) {
-      removePlayCountBadge();
-      return;
-    }
-
-    const metadata = metadataByVideoId.get(videoId);
-    if (classifyMusicVideo(metadata) !== "music") {
-      removePlayCountBadge();
-      return;
-    }
-
-    const details = getTrackDetails(videoId);
-    if (!details.title || isClearlyNonSongTitle(details.title)) {
+    const details = badgeTrackDetails(videoId);
+    if (!details) {
+      badgeState = null;
       removePlayCountBadge();
       return;
     }
 
     try {
-      const result = await chrome.runtime.sendMessage({ type: "get-play-count", trackKey: details.trackKey });
+      const result = await chrome.runtime.sendMessage({
+        type: "get-play-count",
+        title: details.title,
+        channel: details.channel
+      });
       if (requestId !== badgeRequestId || videoId !== currentVideoId) return;
-      if (result?.ok) renderPlayCountBadge(Number(result.count) || 0, details.title);
+      if (result?.ok) showBadge(videoId, Number(result.count) || 0, details.title);
     } catch (error) {
       if (!isInvalidatedContext(error)) console.warn("Could not read the local play count:", error);
     }
@@ -515,13 +493,26 @@
     return /extension context invalidated/i.test(String(error?.message || error || ""));
   }
 
+  function sendQuietly(message, callback = () => {}) {
+    try {
+      chrome.runtime.sendMessage(message, (result) => {
+        if (chrome.runtime.lastError) return;
+        callback(result);
+      });
+    } catch (error) {
+      if (!isInvalidatedContext(error)) console.warn(`Could not send ${message.type}:`, error);
+    }
+  }
+
   function sendListen(details) {
     try {
       chrome.runtime.sendMessage({ type: "record-listen", ...details }, (result) => {
         try {
           const error = chrome.runtime.lastError;
           if (error && !isInvalidatedContext(error)) console.warn("Could not record listen:", error.message);
-          if (!error && result?.ok) scheduleBadgeUpdate();
+          if (!error && result?.ok && details.videoId === currentVideoId) {
+            showBadge(details.videoId, Number(result.count) || 0, details.title);
+          }
         } catch (error) {
           if (!isInvalidatedContext(error)) console.warn("Could not record listen:", error);
         }
@@ -529,20 +520,6 @@
     } catch (error) {
       if (!isInvalidatedContext(error)) console.warn("Could not record listen:", error);
     }
-  }
-
-  function thresholdFor(video) {
-    const duration = Number(video.duration);
-    if (!Number.isFinite(duration) || duration <= 0) return 30;
-    return Math.max(2, Math.min(30, duration * 0.5));
-  }
-
-  function isPlaybackWrap(previousTime, currentTime, video) {
-    const duration = Number(video.duration);
-    if (!Number.isFinite(duration) || duration <= 0 || currentTime >= previousTime) return false;
-
-    const edgeWindow = Math.min(8, Math.max(2, duration * 0.02));
-    return previousTime >= duration - edgeWindow && currentTime <= edgeWindow;
   }
 
   function createSession(lastTime = 0) {
@@ -563,7 +540,7 @@
     if (!currentVideo || !session) return;
 
     const now = currentVideo.currentTime;
-    if (isPlaybackWrap(session.lastTime, now, currentVideo)) {
+    if (Rules.isPlaybackWrap(session.lastTime, now, currentVideo.duration)) {
       startNextLoop(now);
       return;
     }
@@ -579,10 +556,10 @@
     if (currentVideo.paused || currentVideo.seeking || isAdPlaying() || delta <= 0 || delta > maximumExpectedDelta || session.counted || session.notMusic) return;
 
     session.playedSeconds += delta;
-    if (session.playedSeconds < thresholdFor(currentVideo)) return;
+    if (session.playedSeconds < Rules.playThreshold(currentVideo.duration)) return;
 
     const metadata = metadataByVideoId.get(currentVideoId);
-    const classification = classifyMusicVideo(metadata);
+    const classification = Rules.classifyMusicVideo(metadata);
     if (classification === "unknown") return;
     if (classification !== "music") {
       session.notMusic = true;
@@ -591,7 +568,7 @@
 
     const details = getTrackDetails(currentVideoId);
     if (!details.title) return;
-    if (isClearlyNonSongTitle(details.title)) {
+    if (Rules.isClearlyNonSongTitle(details.title)) {
       session.notMusic = true;
       return;
     }
@@ -603,7 +580,7 @@
   function onSeeking() {
     if (!currentVideo || !session) return;
     const now = currentVideo.currentTime;
-    if (isPlaybackWrap(session.lastTime, now, currentVideo)) {
+    if (Rules.isPlaybackWrap(session.lastTime, now, currentVideo.duration)) {
       startNextLoop(now);
       return;
     }
@@ -636,7 +613,7 @@
     }
 
     if (video === currentVideo) return;
-    if (sameTrack && currentVideo && session && isPlaybackWrap(currentVideo.currentTime, video.currentTime, video)) {
+    if (sameTrack && currentVideo && session && Rules.isPlaybackWrap(currentVideo.currentTime, video.currentTime, video.duration)) {
       startNextLoop(video.currentTime || 0);
     }
     detachVideo();
@@ -649,17 +626,35 @@
     video.addEventListener("ended", onEnded);
   }
 
+  // YouTube changes its DOM all the time. Syncing at most every SYNC_THROTTLE_MS keeps this cheap,
+  // and only a new video asks the service worker for a count.
   function scheduleSync() {
-    window.clearTimeout(syncTimer);
-    syncTimer = window.setTimeout(() => {
-      syncPlayer();
-      scheduleBadgeUpdate();
-    }, 120);
+    if (syncTimer) return;
+    const wait = Math.max(0, lastSyncAt + SYNC_THROTTLE_MS - performance.now());
+    syncTimer = window.setTimeout(runSync, wait);
   }
 
-  document.addEventListener("yt-navigate-finish", scheduleSync);
-  document.addEventListener("yt-page-data-updated", scheduleSync);
-  window.addEventListener("popstate", scheduleSync);
+  function runSync() {
+    syncTimer = 0;
+    lastSyncAt = performance.now();
+    const previousVideoId = currentVideoId;
+    syncPlayer();
+    if (currentVideoId !== previousVideoId) scheduleBadgeUpdate();
+    else if (getVideoId() === currentVideoId) restoreBadge();
+    else if (badgeState) {
+      badgeState = null;
+      removePlayCountBadge();
+    }
+  }
+
+  function onNavigate() {
+    scheduleSync();
+    scheduleBadgeUpdate();
+  }
+
+  document.addEventListener("yt-navigate-finish", onNavigate);
+  document.addEventListener("yt-page-data-updated", onNavigate);
+  window.addEventListener("popstate", onNavigate);
   new MutationObserver(scheduleSync).observe(document.documentElement, {
     childList: true,
     subtree: true

@@ -14,10 +14,10 @@ Open the extension popup to see listening totals and your top five songs. Click 
 
 - Videos marked with YouTube's `Music` category are counted. `Entertainment` and `People & Blogs` videos count only when the title and description contain clear music signals, such as song credits, an official music-service link, or a clearly labeled lo-fi/mashup/slowed-reverb mix. Trailers, teasers, reactions, and other non-music formats stay excluded. Videos with no category metadata are skipped.
 - Titles that clearly indicate podcasts, reactions, reviews, tutorials, interviews, playlists, or full albums are skipped.
-- Videos with the same normalized title are grouped together.
+- Plays of the same song are grouped together. Upload labels such as `(Official Video)`, `[Lyrics]`, `| Official Audio` and featured-artist credits are ignored. When the title does not name the artist (`Artist - Song`), the channel name is added, so songs with the same title by different artists stay apart. Words such as `Live` or `Remix` are kept.
 - A play counts after 30 seconds. Videos shorter than 60 seconds count after half their duration.
 - Pausing and resuming does not create another play. Replaying or looping a song starts a new play session.
-- The browser keeps the latest 1,000,000 plays locally. With Google cloud backup enabled, history is merged with your Firestore account and synced across Chrome profiles. The extension requests Chrome's `unlimitedStorage` permission for this history size; Firestore cloud usage remains subject to the project's quotas and billing plan.
+- The browser keeps the latest 1,000,000 plays locally, stored by month with a running total per track. A new play writes only its month and one small part of the totals, so recording stays fast as the history grows. The extension requests Chrome's `unlimitedStorage` permission for this history size.
 
 ## Local date and weather
 
@@ -31,14 +31,29 @@ Cloud backup uses Firebase Authentication, Cloud Firestore, and Chrome's Google 
 
 1. For a separate deployment, create a project in the [Firebase Console](https://console.firebase.google.com/) and register a Web app. Copy its **Web API key** and **Project ID** into `firebase-config.js`.
 2. In Firebase Authentication, enable the **Google** provider.
-3. Create a **Cloud Firestore** database. Open **Firestore Database → Rules**, replace the rules with the contents of `firestore.rules`, and publish them.
+3. Create a **Cloud Firestore** database. Open **Firestore Database → Rules**, replace the rules with the contents of `firestore.rules`, and publish them. Publish them again after every update of this file; version 1.2.0 needs the new rules for the `meta/state` document and the `uploadedAt` field, or sync stops with an "access was denied" message.
 4. Load the extension in Chrome using the steps below. Then open `chrome://extensions`, turn on **Developer mode**, and copy the extension ID shown for Lazy Song Counter.
 5. In Google Cloud Console, create an OAuth client ID with application type **Chrome Extension** and register that extension ID. Copy the client ID into `manifest.json`, replacing `YOUR_CHROME_EXTENSION_OAUTH_CLIENT_ID.apps.googleusercontent.com`.
-6. Reload the extension in `chrome://extensions`, refresh open YouTube tabs, then click **Connect** in the extension and choose your Google account.
+6. In Google Cloud Console, open **APIs & Services → Credentials**, edit the Firebase **Web API key**, and set **API restrictions** to *Identity Toolkit API*, *Token Service API* and *Cloud Firestore API*. The key is public, so this limits what it can be used for.
+7. Reload the extension in `chrome://extensions`, refresh open YouTube tabs, then click **Connect** in the extension and choose your Google account.
 
-On the first sign-in, existing local plays are merged with that account's cloud history. Up to the latest 1,000,000 plays are kept in the browser and cloud. New plays sync in the background; a full sync runs at sign-in, on **Sync now**, and at most once every eight hours when Chrome starts. Signing out leaves the cloud copy in place. **Clear history** removes history from both the browser and the connected account. Large Firestore histories can exceed the free daily read/write quotas; check the project's billing plan before relying on million-play cloud sync.
+On sign-in, the browser reads the account's history once and merges it with the local plays. After that, each sync reads only the plays uploaded since the last sync, so a sync costs about one Firestore read per new play. New plays upload right after they are recorded; plays recorded offline wait in a queue and upload at the next sync. A sync runs at sign-in, on **Sync now**, when the popup or library opens (at most every ten minutes), when Chrome starts, and when the connection comes back.
+
+**Clear history** removes history from the browser and the connected account, and the account remembers the time of the clear. Other browsers apply the clear at their next sync, and plays from before it are never uploaded again. If the cloud cannot be reached, the browser is cleared at once and the cloud copy at the next sync. A clear while signed out leaves the cloud copy in place; it merges back at the next sign-in. Signing out also leaves the cloud copy in place. The browser keeps the latest 1,000,000 plays; the cloud copy is not trimmed.
 
 `firebase-config.js` contains public Web app identifiers. Do not put a service account JSON file, private key, or OAuth client secret in the extension or this repository.
+
+## Upgrade from 1.1.x
+
+On the first start after the update, the extension converts the old single-list history to the monthly format and regroups the plays with the new track rules. The first sync after the update reads the whole cloud history once, the same as a new sign-in. Publish the new `firestore.rules` before you reload the extension.
+
+## Tests
+
+The rules, the storage and the cloud sync (against a fake Firestore, with two browsers) have unit tests. They need Node.js 20 or later and no packages:
+
+```bash
+node --test "tests/*.test.js"
+```
 
 ## Load in Chrome
 

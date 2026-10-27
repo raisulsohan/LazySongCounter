@@ -45,6 +45,7 @@
     const metadata = {
       category: category.trim(),
       title: typeof videoDetails.title === "string" ? videoDetails.title.slice(0, 200) : "",
+      author: typeof videoDetails.author === "string" ? videoDetails.author.slice(0, 120) : "",
       description: typeof videoDetails.shortDescription === "string"
         ? videoDetails.shortDescription.slice(0, 8000)
         : "",
