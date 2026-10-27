@@ -13,6 +13,7 @@ const dateFormat = new Intl.DateTimeFormat("en-US", {
   dateStyle: "medium",
   timeStyle: "short"
 });
+const dayFormat = new Intl.DateTimeFormat("en-US", { dateStyle: "medium" });
 let selectedPeriod = "daily";
 let allListens = [];
 let page = 0;
@@ -20,16 +21,34 @@ let page = 0;
 const listElement = document.querySelector("#track-list");
 const emptyElement = document.querySelector("#empty-state");
 const searchElement = document.querySelector("#search");
+const dateElement = document.querySelector("#history-date");
+const clearDateButton = document.querySelector("#clear-date");
+dateElement.max = localDateValue(new Date());
 
 document.querySelectorAll(".periods button").forEach((button) => {
   button.addEventListener("click", () => {
     selectedPeriod = button.dataset.period;
+    dateElement.value = "";
+    updateDateControls();
     page = 0;
     document.querySelectorAll(".periods button").forEach((item) => {
       item.classList.toggle("active", item === button);
     });
     render();
   });
+});
+
+dateElement.addEventListener("change", () => {
+  page = 0;
+  updateDateControls();
+  render();
+});
+
+clearDateButton.addEventListener("click", () => {
+  dateElement.value = "";
+  page = 0;
+  updateDateControls();
+  render();
 });
 
 searchElement.addEventListener("input", () => {
@@ -83,13 +102,43 @@ function rangeStart(period, now = new Date()) {
   return null;
 }
 
-function getVisibleTracks(applySearch = true) {
-  const start = rangeStart(selectedPeriod);
-  const query = searchElement.value.trim().toLocaleLowerCase();
-  const listens = allListens.filter((item) => {
-    const timestamp = Number(item.playedAt);
-    return Number.isFinite(timestamp) && (!start || timestamp >= start.getTime());
+function localDateValue(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function selectedDateRange() {
+  if (!dateElement.value) return null;
+  const [year, month, day] = dateElement.value.split("-").map(Number);
+  const start = new Date(year, month - 1, day);
+  const end = new Date(year, month - 1, day + 1);
+  return { start: start.getTime(), end: end.getTime(), label: dayFormat.format(start) };
+}
+
+function updateDateControls() {
+  const hasDate = Boolean(dateElement.value);
+  clearDateButton.hidden = !hasDate;
+  document.querySelectorAll(".periods button").forEach((button) => {
+    button.classList.toggle("active", !hasDate && button.dataset.period === selectedPeriod);
   });
+}
+
+function getFilteredListens() {
+  const selectedDate = selectedDateRange();
+  const start = selectedDate ? null : rangeStart(selectedPeriod);
+  return allListens.filter((item) => {
+    const timestamp = Number(item.playedAt);
+    if (!Number.isFinite(timestamp)) return false;
+    if (selectedDate) return timestamp >= selectedDate.start && timestamp < selectedDate.end;
+    return !start || timestamp >= start.getTime();
+  });
+}
+
+function getVisibleTracks(applySearch = true) {
+  const query = searchElement.value.trim().toLocaleLowerCase();
+  const listens = getFilteredListens();
   const grouped = new Map();
 
   listens.forEach((item) => {
@@ -118,24 +167,23 @@ function getVisibleTracks(applySearch = true) {
 }
 
 function render() {
-  const start = rangeStart(selectedPeriod);
-  const listensInPeriod = allListens.filter((item) => {
-    const timestamp = Number(item.playedAt);
-    return Number.isFinite(timestamp) && (!start || timestamp >= start.getTime());
-  });
+  const selectedDate = selectedDateRange();
+  const listensInPeriod = getFilteredListens();
   const tracks = getVisibleTracks();
   const totalPages = Math.max(1, Math.ceil(tracks.length / PAGE_SIZE));
   page = Math.min(page, totalPages - 1);
   const firstIndex = page * PAGE_SIZE;
   const pageTracks = tracks.slice(firstIndex, firstIndex + PAGE_SIZE);
 
-  document.querySelector("#period-chip").textContent = PERIODS[selectedPeriod].label;
-  document.querySelector("#summary-period").textContent = PERIODS[selectedPeriod].summary;
+  document.querySelector("#period-chip").textContent = selectedDate ? selectedDate.label : PERIODS[selectedPeriod].label;
+  document.querySelector("#summary-period").textContent = selectedDate
+    ? `Listens on ${selectedDate.label}`
+    : PERIODS[selectedPeriod].summary;
   document.querySelector("#total-listens").textContent = numberFormat.format(listensInPeriod.length);
   document.querySelector("#unique-tracks").textContent = numberFormat.format(getVisibleTracks(false).length);
   document.querySelector("#result-count").textContent = `${numberFormat.format(tracks.length)} ${tracks.length === 1 ? "track" : "tracks"}`;
   document.querySelector("#range-label").textContent = tracks.length
-    ? `Sorted by most played · ${PERIODS[selectedPeriod].label}`
+    ? `Sorted by most played · ${selectedDate ? selectedDate.label : PERIODS[selectedPeriod].label}`
     : "No tracks found";
   document.querySelector("#page-range").textContent = tracks.length
     ? `Showing ${numberFormat.format(firstIndex + 1)}–${numberFormat.format(Math.min(firstIndex + PAGE_SIZE, tracks.length))} of ${numberFormat.format(tracks.length)} tracks`
@@ -151,10 +199,16 @@ function render() {
 
   if (tracks.length === 0) {
     const hasSearch = Boolean(searchElement.value.trim());
-    document.querySelector("#empty-title").textContent = hasSearch ? "No matching tracks" : "No tracks in this period";
+    document.querySelector("#empty-title").textContent = hasSearch
+      ? "No matching tracks"
+      : selectedDate
+        ? `No tracks on ${selectedDate.label}`
+        : "No tracks in this period";
     document.querySelector("#empty-description").textContent = hasSearch
       ? "Try a different title or channel name."
-      : "Listen to a song on YouTube and it will appear here.";
+      : selectedDate
+        ? "No listens were recorded on this date."
+        : "Listen to a song on YouTube and it will appear here.";
   }
 
   pageTracks.forEach((track, index) => {

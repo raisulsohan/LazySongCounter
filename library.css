@@ -275,6 +275,49 @@ h2 {
   box-shadow: 0 3px 10px rgba(92, 59, 196, .3);
 }
 
+.date-filter {
+  display: flex;
+  min-height: 43px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  border: 1px solid #393346;
+  border-radius: 11px;
+  background: #14121b;
+  color: #a89ebc;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.date-filter input {
+  min-width: 128px;
+  min-height: 37px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #f4f1ff;
+  font-size: 11px;
+}
+
+.date-filter:focus-within {
+  border-color: #785cb5;
+}
+
+.clear-date {
+  min-height: 39px;
+  padding: 0 10px;
+  border: 1px solid #393149;
+  border-radius: 10px;
+  background: #1b1825;
+  color: #c9b5ff;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.clear-date:hover {
+  border-color: #6d53a0;
+}
+
 .search-box {
   display: flex;
   min-width: min(290px, 100%);
@@ -551,6 +594,15 @@ h2 {
 
   .periods {
     justify-content: space-between;
+  }
+
+  .date-filter {
+    justify-content: space-between;
+  }
+
+  .date-filter input {
+    flex: 1;
+    text-align: right;
   }
 
   .periods button {

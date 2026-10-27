@@ -1,6 +1,7 @@
 (() => {
   const statusElement = document.querySelector("#cloud-status");
   const detailsElement = document.querySelector("#cloud-details");
+  const accountElement = statusElement?.closest(".cloud-account, .cloud-panel");
   const signInButton = document.querySelector("#cloud-sign-in");
   const syncButton = document.querySelector("#cloud-sync");
   const signOutButton = document.querySelector("#cloud-sign-out");
@@ -101,8 +102,7 @@
 
   function renderState(state) {
     if (!state?.configured && !state?.signedIn) {
-      statusElement.textContent = "Cloud backup setup needed";
-      detailsElement.textContent = "Add Firebase values and a Chrome OAuth client ID; see README.";
+      setCloudCopy("Cloud backup setup needed", "Add Firebase values and a Chrome OAuth client ID; see README.");
       signInButton.hidden = false;
       signInButton.disabled = true;
       syncButton.hidden = true;
@@ -111,8 +111,7 @@
     }
 
     if (!state?.configured) {
-      statusElement.textContent = "Cloud setup incomplete";
-      detailsElement.textContent = state.email || "Update Firebase and OAuth settings in the extension files.";
+      setCloudCopy("Cloud setup incomplete", state.email || "Update Firebase and OAuth settings in the extension files.");
       signInButton.hidden = true;
       syncButton.hidden = false;
       syncButton.disabled = true;
@@ -129,24 +128,29 @@
     signOutButton.disabled = busy;
 
     if (!state?.signedIn) {
-      statusElement.textContent = "Local history only";
-      detailsElement.textContent = "Connect Google to back up and sync your history.";
+      setCloudCopy("Local history only", "Connect Google to back up and sync your history.");
       return;
     }
 
     const email = state.email || "Google account";
     if (state.status === "syncing") {
-      statusElement.textContent = "Syncing cloud history…";
-      detailsElement.textContent = email;
+      setCloudCopy("Syncing cloud history…", email);
     } else if (state.status === "error") {
-      statusElement.textContent = "Cloud sync needs attention";
-      detailsElement.textContent = state.error || email;
+      setCloudCopy("Cloud sync needs attention", state.error || email);
     } else if (state.lastSyncedAt) {
-      statusElement.textContent = "Cloud backup is on";
-      detailsElement.textContent = `${email} · Last synced ${new Intl.DateTimeFormat("en-US", { dateStyle: "short", timeStyle: "short" }).format(state.lastSyncedAt)}`;
+      setCloudCopy("Cloud backup is on", `${email} · Last synced ${new Intl.DateTimeFormat("en-US", { dateStyle: "short", timeStyle: "short" }).format(state.lastSyncedAt)}`);
     } else {
-      statusElement.textContent = "Google account connected";
-      detailsElement.textContent = email;
+      setCloudCopy("Google account connected", email);
+    }
+  }
+
+  function setCloudCopy(status, details) {
+    statusElement.textContent = status;
+    detailsElement.textContent = details;
+    statusElement.title = details;
+    if (accountElement) {
+      accountElement.setAttribute("aria-label", `${status}. ${details}`);
+      accountElement.title = details;
     }
   }
 
@@ -160,7 +164,7 @@
   }
 
   function setMessage(message) {
-    detailsElement.textContent = message;
+    setCloudCopy(statusElement.textContent, message);
   }
 
   void refreshState();

@@ -66,6 +66,11 @@
             <button type="button" data-period="yearly">Year</button>
             <button type="button" data-period="all">All time</button>
           </nav>
+          <label class="date-filter">
+            <span>On date</span>
+            <input id="history-date" type="date" aria-label="Show listening history for a date">
+          </label>
+          <button id="clear-date" class="clear-date" type="button" hidden>Clear date</button>
           <label class="search-box">
             <span aria-hidden="true">⌕</span>
             <input id="search" type="search" placeholder="Search tracks or channels" autocomplete="off">
@@ -101,7 +106,7 @@
       </section>
 
       <footer class="footer">
-        <span>Only YouTube videos marked as Music are counted. A play counts after 30 seconds, or half the song if it is under 60 seconds. You can back up history with Google sign-in.</span>
+        <span>Eligible music videos are counted after 30 seconds of listening, or half the song if it is under 60 seconds. You can back up history with Google sign-in.</span>
         <span class="creator">Created by <a href="https://raisulsohan.com/en/portfolio/" target="_blank" rel="noreferrer">Raisul Sohan</a></span>
       </footer>
     </main>

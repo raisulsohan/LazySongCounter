@@ -18,6 +18,19 @@
         <button class="icon-button" id="refresh" type="button" aria-label="Refresh" title="Refresh">↻</button>
       </header>
 
+      <section class="date-weather" aria-label="Local date and weather">
+        <div class="local-date">
+          <span id="date-weekday"></span>
+          <strong id="date-value"></strong>
+        </div>
+        <div class="weather-tools">
+          <button type="button" class="weather-button" id="weather-location" aria-label="Use your location for local weather. Rounded coordinates are sent to Open-Meteo and not saved.">
+            <span id="weather-value">Add weather</span>
+          </button>
+          <a class="weather-source" id="weather-source" href="https://open-meteo.com/" target="_blank" rel="noreferrer" hidden>Open-Meteo</a>
+        </div>
+      </section>
+
       <section class="summary" aria-label="Listening summary">
         <div class="summary-main">
           <span class="summary-label" id="summary-period">Listens today</span>
@@ -65,7 +78,7 @@
         <div id="empty-state" class="empty-state" hidden>
           <div class="empty-disc" aria-hidden="true">♫</div>
           <strong>No songs counted yet</strong>
-          <p>Play a song in YouTube's Music category. It will appear here after 30 seconds of listening.</p>
+          <p>Eligible music tracks appear here after 30 seconds of listening.</p>
         </div>
       </section>
 
@@ -76,6 +89,7 @@
       <div id="toast" class="toast" role="status" aria-live="polite"></div>
     </main>
     <script src="account.js"></script>
+    <script src="weather.js"></script>
     <script src="popup.js"></script>
   </body>
 </html>

@@ -2,7 +2,7 @@
 
 A Manifest V3 Chrome extension that tracks listening activity on YouTube and YouTube Music. The popup ranks your most-played tracks for today, this week, this month, this year, or all time.
 
-The popup shows the top 5 tracks for a quick view. Click **View full list** to open the searchable, paginated Song Library in a separate tab. The library opens to **Today** by default. On eligible YouTube watch pages, a local `N played` badge appears beside the Like control.
+The compact popup shows the local date, optional location-based weather, and top 5 tracks. Click **View full list** to open the searchable, paginated Song Library in a separate tab. The library opens to **Today** by default and can filter history to a specific date. On eligible YouTube watch pages, a local `N played` badge appears beside the Like control.
 
 ## Counting rules
 
@@ -12,6 +12,10 @@ The popup shows the top 5 tracks for a quick view. Click **View full list** to o
 - A play counts after 30 seconds. Videos shorter than 60 seconds count after half their duration.
 - Pausing and resuming does not create another play. Replaying or looping a song starts a new play session.
 - The browser keeps the latest 10,000 plays locally. With Google cloud backup enabled, history is merged with your Firestore account and synced across Chrome profiles.
+
+## Local date and weather
+
+The popup shows today's date using the browser's local time zone. Click **Add weather** to use the device location and show the current weather; the date then follows that location's time zone. Location is only requested after clicking the button. Coordinates are rounded before being sent to the Open-Meteo forecast API, and the extension caches only the returned weather and time zone locally, not the coordinates. The readout links to Open-Meteo for attribution. Its free API tier is for non-commercial use. Chrome lists the extension's geolocation permission as **Detect your physical location**.
 
 ## Set up Google cloud backup
 

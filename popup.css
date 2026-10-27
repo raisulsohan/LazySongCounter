@@ -25,7 +25,7 @@ button {
 }
 
 .app {
-  padding: 12px 16px 10px;
+  padding: 10px 14px 8px;
 }
 
 .header {
@@ -36,8 +36,8 @@ button {
 
 .brand-mark {
   display: grid;
-  width: 35px;
-  height: 35px;
+  width: 33px;
+  height: 33px;
   place-items: center;
   border-radius: 11px;
   background: linear-gradient(145deg, #a27bff, #6840ed);
@@ -103,13 +103,90 @@ h1 {
   background: #29243a;
 }
 
+.date-weather {
+  display: flex;
+  min-height: 34px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 7px;
+  padding: 4px 9px;
+  border: 1px solid #2c2837;
+  border-radius: 10px;
+  background: rgba(23, 21, 32, .82);
+}
+
+.local-date {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  gap: 7px;
+}
+
+.local-date span {
+  color: #c9b5ff;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .04em;
+}
+
+.local-date strong {
+  overflow: hidden;
+  color: #c6bfd5;
+  font-size: 10px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.weather-button {
+  min-width: 77px;
+  padding: 4px 7px;
+  border: 1px solid #393149;
+  border-radius: 8px;
+  background: #1c1928;
+  color: #d8caff;
+  cursor: pointer;
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.weather-button:hover:not(:disabled) {
+  border-color: #6d53a0;
+  background: #282239;
+}
+
+.weather-button:disabled {
+  cursor: wait;
+  opacity: .65;
+}
+
+.weather-tools {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 5px;
+}
+
+.weather-source {
+  color: #9c91b6;
+  font-size: 8px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.weather-source:hover {
+  color: #d8caff;
+  text-decoration: underline;
+}
+
 .summary {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  min-height: 78px;
-  margin-top: 11px;
-  padding: 11px 15px;
+  min-height: 70px;
+  margin-top: 9px;
+  padding: 9px 13px;
   overflow: hidden;
   border: 1px solid rgba(174, 148, 255, .16);
   border-radius: 16px;
@@ -162,7 +239,7 @@ h1 {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   gap: 4px;
-  margin: 10px 0 13px;
+  margin: 8px 0 8px;
   padding: 3px;
   border: 1px solid #292536;
   border-radius: 13px;
@@ -187,13 +264,13 @@ h1 {
 
 .cloud-account {
   display: flex;
-  min-height: 38px;
+  min-height: 28px;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  margin-top: -5px;
-  margin-bottom: 10px;
-  padding: 6px 8px 6px 10px;
+  margin-top: -4px;
+  margin-bottom: 6px;
+  padding: 3px 8px;
   border: 1px solid #302b40;
   border-radius: 11px;
   background: rgba(28, 25, 40, .78);
@@ -203,8 +280,8 @@ h1 {
   display: flex;
   min-width: 0;
   flex: 1;
-  flex-direction: column;
-  gap: 2px;
+  flex-direction: row;
+  align-items: center;
 }
 
 .cloud-copy strong {
@@ -217,6 +294,7 @@ h1 {
 }
 
 .cloud-copy span {
+  display: none;
   overflow: hidden;
   color: #938ba5;
   font-size: 8px;
@@ -232,7 +310,7 @@ h1 {
 }
 
 .cloud-actions button {
-  padding: 5px 7px;
+  padding: 4px 6px;
   border: 1px solid #473b60;
   border-radius: 8px;
   background: #282139;
@@ -263,7 +341,7 @@ h1 {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .section-heading .eyebrow {
@@ -288,14 +366,14 @@ h2 {
 .track-list {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 4px;
 }
 
 .view-all {
   display: block;
   width: 100%;
-  margin-top: 7px;
-  padding: 7px 10px;
+  margin-top: 5px;
+  padding: 6px 10px;
   border: 1px solid #393149;
   border-radius: 11px;
   background: #1b1825;
@@ -315,8 +393,8 @@ h2 {
   grid-template-columns: 25px 1fr auto;
   align-items: center;
   gap: 8px;
-  min-height: 47px;
-  padding: 6px 8px;
+  min-height: 43px;
+  padding: 5px 7px;
   border: 1px solid #2b2736;
   border-radius: 12px;
   background: #191722;
@@ -433,8 +511,8 @@ h2 {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-top: 9px;
-  padding-top: 8px;
+  margin-top: 7px;
+  padding-top: 6px;
   border-top: 1px solid #282531;
 }
 
