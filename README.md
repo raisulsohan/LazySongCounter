@@ -4,9 +4,15 @@ A Manifest V3 Chrome extension that tracks listening activity on YouTube and You
 
 The compact popup shows the local date, optional city-based weather, a beat-reactive music visualizer, and the top 5 tracks. Click the visualizer to open a draggable animation bar over the current YouTube page. Click **View full list** to open the searchable, paginated Song Library in a separate tab. The library opens to **Today** by default and can filter history to a specific date. On eligible YouTube watch pages, a local `N played` badge appears beside the Like control.
 
+## Demo
+
+![Lazy Song Counter popup, top tracks, and draggable beat visualizer on YouTube](docs/demo.svg)
+
+Open the extension popup to see listening totals and your top five songs. Click the mini visualizer to open the thin, draggable beat bar on the YouTube page. Use **View full list** to browse the complete history. The image uses sample song data.
+
 ## Counting rules
 
-- Videos marked with YouTube's `Music` category are counted. `Entertainment` videos count only when the title or music keywords identify a track (such as a song, theme, BGM, or OST) and YouTube's description includes music credits or an official music-service link. Trailers, teasers, reactions, and other non-music formats stay excluded. Videos with no category metadata are skipped.
+- Videos marked with YouTube's `Music` category are counted. `Entertainment` and `People & Blogs` videos count only when the title and description contain clear music signals, such as song credits, an official music-service link, or a clearly labeled lo-fi/mashup/slowed-reverb mix. Trailers, teasers, reactions, and other non-music formats stay excluded. Videos with no category metadata are skipped.
 - Titles that clearly indicate podcasts, reactions, reviews, tutorials, interviews, playlists, or full albums are skipped.
 - Videos with the same normalized title are grouped together.
 - A play counts after 30 seconds. Videos shorter than 60 seconds count after half their duration.

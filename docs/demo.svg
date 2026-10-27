@@ -1,0 +1,191 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="900" viewBox="0 0 1440 900" role="img" aria-labelledby="title description">
+  <title id="title">Lazy Song Counter demo</title>
+  <desc id="description">The extension popup shows listening stats and top tracks while a draggable gradient visualizer floats over YouTube.</desc>
+  <defs>
+    <linearGradient id="frame" x2="0" y2="1"><stop stop-color="#272832"/><stop offset="1" stop-color="#14151d"/></linearGradient>
+    <linearGradient id="page" x2="1" y2="1"><stop stop-color="#1f2432"/><stop offset=".45" stop-color="#452c42"/><stop offset="1" stop-color="#111821"/></linearGradient>
+    <linearGradient id="art" x2="1" y2="1"><stop stop-color="#ffbe91"/><stop offset=".38" stop-color="#bc5c71"/><stop offset=".72" stop-color="#503a68"/><stop offset="1" stop-color="#18253d"/></linearGradient>
+    <linearGradient id="violet" x2="1"><stop stop-color="#7654e8"/><stop offset=".45" stop-color="#bd62f2"/><stop offset=".74" stop-color="#7288ff"/><stop offset="1" stop-color="#45d8e8"/></linearGradient>
+    <linearGradient id="popup" x2="0" y2="1"><stop stop-color="#171321"/><stop offset="1" stop-color="#100e18"/></linearGradient>
+    <linearGradient id="summary" x2="1"><stop stop-color="#302448"/><stop offset=".7" stop-color="#211a31"/><stop offset="1" stop-color="#2b203c"/></linearGradient>
+    <radialGradient id="glow"><stop stop-color="#f6a57c" stop-opacity=".7"/><stop offset="1" stop-color="#f6a57c" stop-opacity="0"/></radialGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="14" stdDeviation="18" flood-color="#000" flood-opacity=".45"/></filter>
+    <filter id="softGlow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="10"/></filter>
+    <clipPath id="videoClip"><rect x="52" y="178" width="896" height="520" rx="18"/></clipPath>
+  </defs>
+
+  <rect width="1440" height="900" fill="#0e0f15"/>
+  <rect x="18" y="18" width="1404" height="864" rx="22" fill="url(#frame)" stroke="#3a3b46"/>
+  <path d="M40 18h1360a22 22 0 0 1 22 22v49H18V40a22 22 0 0 1 22-22Z" fill="#292a34"/>
+  <circle cx="44" cy="48" r="7" fill="#ff7068"/><circle cx="68" cy="48" r="7" fill="#ffc35c"/><circle cx="92" cy="48" r="7" fill="#58ce78"/>
+  <rect x="126" y="29" width="265" height="38" rx="12" fill="#3a3b46"/>
+  <text x="147" y="53" fill="#eeeaf3" font-family="Segoe UI,Arial,sans-serif" font-size="14">YouTube Music Video</text>
+  <rect x="405" y="29" width="205" height="38" rx="12" fill="#30313b"/>
+  <text x="426" y="53" fill="#aaa9b5" font-family="Segoe UI,Arial,sans-serif" font-size="14">Lazy Song Counter</text>
+  <rect x="48" y="102" width="1344" height="42" rx="21" fill="#171820" stroke="#3c3d49"/>
+  <path d="m75 123 8-7m-8 7 8 7" stroke="#c5c4ce" stroke-width="2" stroke-linecap="round"/>
+  <path d="m105 116 8 7-8 7" fill="none" stroke="#777986" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="143" cy="123" r="8" fill="none" stroke="#8f91a0" stroke-width="2"/>
+  <rect x="174" y="109" width="1080" height="28" rx="14" fill="#24252f"/>
+  <text x="195" y="128" fill="#a6a8b5" font-family="Segoe UI,Arial,sans-serif" font-size="13">youtube.com/watch?v=example</text>
+  <circle cx="1317" cy="123" r="10" fill="#8e68f0"/><circle cx="1317" cy="123" r="4" fill="none" stroke="#e3d8ff"/>
+  <circle cx="1350" cy="123" r="10" fill="#454651"/><circle cx="1350" cy="123" r="4" fill="#d9d9e1"/>
+
+  <rect x="20" y="160" width="1400" height="704" fill="#0f1016"/>
+  <rect x="20" y="160" width="1400" height="58" fill="#111218"/>
+  <circle cx="58" cy="189" r="14" fill="#ff0033"/><path d="m55 181 11 8-11 8Z" fill="#fff"/>
+  <text x="82" y="196" fill="#f7f7fb" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="700">YouTube</text>
+  <rect x="342" y="174" width="440" height="32" rx="16" fill="#20212a" stroke="#33343f"/>
+  <text x="364" y="195" fill="#888b98" font-family="Segoe UI,Arial,sans-serif" font-size="13">Search</text>
+  <circle cx="797" cy="190" r="16" fill="#292a34"/><circle cx="797" cy="190" r="6" fill="none" stroke="#c6c7ce" stroke-width="2"/>
+  <circle cx="1320" cy="190" r="15" fill="#272832"/><circle cx="1320" cy="190" r="6" fill="none" stroke="#f5f4f8" stroke-width="2"/>
+
+  <g clip-path="url(#videoClip)">
+    <rect x="52" y="178" width="896" height="520" fill="url(#art)"/>
+    <circle cx="452" cy="438" r="295" fill="url(#glow)" filter="url(#softGlow)"/>
+    <circle cx="545" cy="420" r="160" fill="#1a1828" fill-opacity=".55"/>
+    <circle cx="545" cy="420" r="137" fill="none" stroke="#ffd3bb" stroke-opacity=".52" stroke-width="2"/>
+    <circle cx="545" cy="420" r="111" fill="none" stroke="#ffd3bb" stroke-opacity=".38" stroke-width="2"/>
+    <circle cx="545" cy="420" r="86" fill="none" stroke="#ffd3bb" stroke-opacity=".27" stroke-width="2"/>
+    <circle cx="545" cy="420" r="24" fill="#f5c8ba" fill-opacity=".8"/>
+    <path d="M0 581c153-72 277-20 393-53s224-92 335-53 139 66 220 8v215H0Z" fill="#171c2b" fill-opacity=".76"/>
+    <path d="M0 640c188-90 321-16 460-53s223-71 338-39 119 45 174 8v142H0Z" fill="#101722" fill-opacity=".82"/>
+    <text x="86" y="606" fill="#fff1e9" fill-opacity=".94" font-family="Segoe UI,Arial,sans-serif" font-size="13" letter-spacing="3">NOW PLAYING</text>
+    <text x="86" y="641" fill="#fff" font-family="Segoe UI,Arial,sans-serif" font-size="27" font-weight="600">Midnight Echo</text>
+    <text x="86" y="667" fill="#f3dce2" font-family="Segoe UI,Arial,sans-serif" font-size="15">The Skylines · Official Music Video</text>
+  </g>
+  <rect x="52" y="178" width="896" height="520" rx="18" fill="none" stroke="#38323f"/>
+
+  <!-- The floating, draggable visualizer -->
+  <g filter="url(#shadow)">
+    <rect x="92" y="250" width="812" height="26" rx="13" fill="#171320" fill-opacity=".94" stroke="#c0a2ff" stroke-opacity=".42"/>
+    <rect x="103" y="260" width="790" height="7" rx="4" fill="url(#violet)" fill-opacity=".16"/>
+    <g fill="url(#violet)">
+      <rect x="107" y="258" width="6" height="10" rx="3"/><rect x="126" y="255" width="6" height="16" rx="3"/>
+      <rect x="145" y="257" width="6" height="12" rx="3"/><rect x="164" y="253" width="6" height="20" rx="3"/>
+      <rect x="183" y="256" width="6" height="14" rx="3"/><rect x="202" y="254" width="6" height="18" rx="3"/>
+      <rect x="221" y="257" width="6" height="12" rx="3"/><rect x="240" y="252" width="6" height="22" rx="3"/>
+      <rect x="259" y="255" width="6" height="16" rx="3"/><rect x="278" y="257" width="6" height="12" rx="3"/>
+      <rect x="297" y="253" width="6" height="20" rx="3"/><rect x="316" y="256" width="6" height="14" rx="3"/>
+      <rect x="335" y="251" width="6" height="24" rx="3"/><rect x="354" y="255" width="6" height="16" rx="3"/>
+      <rect x="373" y="258" width="6" height="10" rx="3"/><rect x="392" y="253" width="6" height="20" rx="3"/>
+      <rect x="411" y="255" width="6" height="16" rx="3"/><rect x="430" y="252" width="6" height="22" rx="3"/>
+      <rect x="449" y="256" width="6" height="14" rx="3"/><rect x="468" y="254" width="6" height="18" rx="3"/>
+      <rect x="487" y="257" width="6" height="12" rx="3"/><rect x="506" y="252" width="6" height="22" rx="3"/>
+      <rect x="525" y="255" width="6" height="16" rx="3"/><rect x="544" y="258" width="6" height="10" rx="3"/>
+      <rect x="563" y="253" width="6" height="20" rx="3"/><rect x="582" y="256" width="6" height="14" rx="3"/>
+      <rect x="601" y="251" width="6" height="24" rx="3"/><rect x="620" y="255" width="6" height="16" rx="3"/>
+      <rect x="639" y="257" width="6" height="12" rx="3"/><rect x="658" y="253" width="6" height="20" rx="3"/>
+      <rect x="677" y="255" width="6" height="16" rx="3"/><rect x="696" y="252" width="6" height="22" rx="3"/>
+      <rect x="715" y="256" width="6" height="14" rx="3"/><rect x="734" y="254" width="6" height="18" rx="3"/>
+      <rect x="753" y="257" width="6" height="12" rx="3"/><rect x="772" y="253" width="6" height="20" rx="3"/>
+      <rect x="791" y="255" width="6" height="16" rx="3"/><rect x="810" y="258" width="6" height="10" rx="3"/>
+      <rect x="829" y="254" width="6" height="18" rx="3"/><rect x="848" y="257" width="6" height="12" rx="3"/>
+      <rect x="867" y="255" width="6" height="16" rx="3"/>
+    </g>
+  </g>
+  <path d="M496 289v26" stroke="#cfb8ff" stroke-width="1.5" stroke-dasharray="4 4"/>
+  <rect x="420" y="315" width="152" height="28" rx="14" fill="#16131e" stroke="#6c5794"/>
+  <text x="496" y="334" text-anchor="middle" fill="#e5d8ff" font-family="Segoe UI,Arial,sans-serif" font-size="12" font-weight="600">DRAG TO MOVE</text>
+
+  <text x="52" y="737" fill="#f4f4f7" font-family="Segoe UI,Arial,sans-serif" font-size="22" font-weight="700">Midnight Echo | The Skylines</text>
+  <text x="52" y="765" fill="#a8a9b4" font-family="Segoe UI,Arial,sans-serif" font-size="14">A sample music video · 3:42</text>
+  <rect x="52" y="787" width="896" height="1" fill="#2b2c34"/>
+  <circle cx="79" cy="820" r="18" fill="#3c315d"/><text x="79" y="825" text-anchor="middle" fill="#e8dcff" font-family="Segoe UI,Arial,sans-serif" font-size="14" font-weight="700">S</text>
+  <text x="108" y="817" fill="#f1f0f5" font-family="Segoe UI,Arial,sans-serif" font-size="14" font-weight="600">The Skylines</text>
+  <text x="108" y="838" fill="#92939e" font-family="Segoe UI,Arial,sans-serif" font-size="12">Music channel</text>
+  <rect x="821" y="804" width="127" height="36" rx="18" fill="#292a34"/>
+  <text x="884" y="827" text-anchor="middle" fill="#e7e5ed" font-family="Segoe UI,Arial,sans-serif" font-size="13">♫  1 played</text>
+
+  <g opacity=".86">
+    <text x="986" y="199" fill="#eeeef3" font-family="Segoe UI,Arial,sans-serif" font-size="14" font-weight="600">Up next</text>
+    <rect x="986" y="218" width="20" height="20" rx="10" fill="#252630"/><path d="m993 228 5-4v8Z" fill="#c9cad3"/>
+    <rect x="986" y="254" width="150" height="86" rx="10" fill="#292b38"/><circle cx="1060" cy="297" r="25" fill="#685072"/>
+    <text x="1150" y="278" fill="#ededf2" font-family="Segoe UI,Arial,sans-serif" font-size="13" font-weight="600">After the Rain</text>
+    <text x="1150" y="300" fill="#9c9daa" font-family="Segoe UI,Arial,sans-serif" font-size="12">Luma Grey</text>
+    <text x="1150" y="322" fill="#868894" font-family="Segoe UI,Arial,sans-serif" font-size="11">4:08 · Music video</text>
+    <rect x="986" y="355" width="150" height="86" rx="10" fill="#292b38"/><circle cx="1060" cy="398" r="25" fill="#45556d"/>
+    <text x="1150" y="379" fill="#ededf2" font-family="Segoe UI,Arial,sans-serif" font-size="13" font-weight="600">Paper Moon</text>
+    <text x="1150" y="401" fill="#9c9daa" font-family="Segoe UI,Arial,sans-serif" font-size="12">Mira Vale</text>
+    <text x="1150" y="423" fill="#868894" font-family="Segoe UI,Arial,sans-serif" font-size="11">3:27 · Official audio</text>
+  </g>
+
+  <!-- Sample-data popup; no personal listening history -->
+  <g filter="url(#shadow)">
+    <rect x="1000" y="118" width="390" height="700" rx="22" fill="url(#popup)" stroke="#443a56"/>
+    <circle cx="1037" cy="153" r="19" fill="#8557ed"/><circle cx="1037" cy="153" r="10" fill="none" stroke="#e1d5ff" stroke-opacity=".9" stroke-width="1.3"/><circle cx="1037" cy="153" r="4" fill="none" stroke="#e1d5ff" stroke-opacity=".7"/>
+    <text x="1067" y="145" fill="#b8a8df" font-family="Segoe UI,Arial,sans-serif" font-size="9" letter-spacing="1.2">YOUR LISTENING STATS</text>
+    <text x="1067" y="167" fill="#fff" font-family="Segoe UI,Arial,sans-serif" font-size="19" font-weight="700">Song Counter</text>
+    <circle cx="1355" cy="153" r="15" fill="#282333" stroke="#59476e"/><path d="M1355 145v8l5 3m-2-12a9 9 0 1 0 6 8" fill="none" stroke="#d7c5ff" stroke-width="1.5" stroke-linecap="round"/>
+
+    <rect x="1021" y="183" width="348" height="31" rx="12" fill="#1d1927" stroke="#342c41"/>
+    <text x="1035" y="203" fill="#c9baff" font-family="Segoe UI,Arial,sans-serif" font-size="10" font-weight="700">TUE  OCT 27, 2026</text>
+    <rect x="1260" y="187" width="66" height="23" rx="9" fill="#272233"/><text x="1293" y="203" text-anchor="middle" fill="#eee8ff" font-family="Segoe UI,Arial,sans-serif" font-size="10">☀  35°</text>
+
+    <rect x="1021" y="224" width="348" height="79" rx="17" fill="url(#summary)" stroke="#64517e" stroke-opacity=".5"/>
+    <text x="1037" y="245" fill="#c7bfd7" font-family="Segoe UI,Arial,sans-serif" font-size="10">Listens today</text>
+    <text x="1037" y="276" fill="#fff" font-family="Segoe UI,Arial,sans-serif" font-size="30" font-weight="700">29</text>
+    <text x="1037" y="293" fill="#aaa1bb" font-family="Segoe UI,Arial,sans-serif" font-size="9">plays recorded</text>
+    <path d="M1193 238v52" stroke="#5b506b"/>
+    <g fill="url(#violet)">
+      <rect x="1211" y="270" width="5" height="10" rx="2.5"/><rect x="1222" y="263" width="5" height="17" rx="2.5"/><rect x="1233" y="267" width="5" height="13" rx="2.5"/>
+      <rect x="1244" y="258" width="5" height="22" rx="2.5"/><rect x="1255" y="265" width="5" height="15" rx="2.5"/><rect x="1266" y="260" width="5" height="20" rx="2.5"/>
+      <rect x="1277" y="267" width="5" height="13" rx="2.5"/><rect x="1288" y="256" width="5" height="24" rx="2.5"/><rect x="1299" y="264" width="5" height="16" rx="2.5"/>
+    </g>
+    <path d="M1314 238v52" stroke="#5b506b"/>
+    <text x="1340" y="251" text-anchor="middle" fill="#d5baff" font-family="Segoe UI,Arial,sans-serif" font-size="17">♫</text>
+    <text x="1340" y="274" text-anchor="middle" fill="#fff" font-family="Segoe UI,Arial,sans-serif" font-size="18" font-weight="700">12</text>
+    <text x="1340" y="290" text-anchor="middle" fill="#aaa1bb" font-family="Segoe UI,Arial,sans-serif" font-size="9">tracks</text>
+
+    <rect x="1021" y="311" width="348" height="36" rx="14" fill="#191720" stroke="#342d40"/>
+    <rect x="1026" y="315" width="62" height="28" rx="11" fill="#7955df"/>
+    <text x="1057" y="334" text-anchor="middle" fill="#fff" font-family="Segoe UI,Arial,sans-serif" font-size="11" font-weight="600">Today</text>
+    <text x="1134" y="334" text-anchor="middle" fill="#c0b7d1" font-family="Segoe UI,Arial,sans-serif" font-size="11">Week</text>
+    <text x="1201" y="334" text-anchor="middle" fill="#c0b7d1" font-family="Segoe UI,Arial,sans-serif" font-size="11">Month</text>
+    <text x="1270" y="334" text-anchor="middle" fill="#c0b7d1" font-family="Segoe UI,Arial,sans-serif" font-size="11">Year</text>
+    <text x="1340" y="334" text-anchor="middle" fill="#c0b7d1" font-family="Segoe UI,Arial,sans-serif" font-size="11">All</text>
+
+    <rect x="1021" y="355" width="348" height="31" rx="12" fill="#1c1924" stroke="#383041"/>
+    <circle cx="1037" cy="370" r="4" fill="#69d69a"/>
+    <text x="1048" y="374" fill="#eee9f5" font-family="Segoe UI,Arial,sans-serif" font-size="10" font-weight="600">Cloud sync connected</text>
+    <rect x="1290" y="360" width="65" height="21" rx="9" fill="#312944" stroke="#59476e"/>
+    <text x="1322" y="375" text-anchor="middle" fill="#dfd1ff" font-family="Segoe UI,Arial,sans-serif" font-size="9">Sync now</text>
+
+    <text x="1023" y="408" fill="#b8a8df" font-family="Segoe UI,Arial,sans-serif" font-size="9" letter-spacing=".7">YOUR FAVORITES</text>
+    <text x="1023" y="430" fill="#fff" font-family="Segoe UI,Arial,sans-serif" font-size="17" font-weight="700">Most played</text>
+    <rect x="1312" y="413" width="56" height="23" rx="11" fill="#211c2b" stroke="#4b3d5d"/>
+    <text x="1340" y="428" text-anchor="middle" fill="#d8c6ff" font-family="Segoe UI,Arial,sans-serif" font-size="9">Today</text>
+
+    <g font-family="Segoe UI,Arial,sans-serif">
+      <rect x="1021" y="443" width="348" height="48" rx="13" fill="#1b1923" stroke="#38313f"/>
+      <rect x="1030" y="453" width="27" height="27" rx="8" fill="#3a2d59"/><text x="1043.5" y="471" text-anchor="middle" fill="#e8ddff" font-size="12" font-weight="700">1</text>
+      <text x="1067" y="463" fill="#f4f1fa" font-size="11" font-weight="600">Midnight Echo</text><text x="1067" y="479" fill="#9691a3" font-size="9">The Skylines</text>
+      <text x="1353" y="465" text-anchor="end" fill="#fff" font-size="14" font-weight="700">8</text><text x="1353" y="480" text-anchor="end" fill="#aaa2b5" font-size="8">plays</text>
+
+      <rect x="1021" y="497" width="348" height="48" rx="13" fill="#1b1923" stroke="#38313f"/>
+      <rect x="1030" y="507" width="27" height="27" rx="8" fill="#29263a"/><text x="1043.5" y="525" text-anchor="middle" fill="#d8d3e5" font-size="12" font-weight="700">2</text>
+      <text x="1067" y="517" fill="#f4f1fa" font-size="11" font-weight="600">After the Rain</text><text x="1067" y="533" fill="#9691a3" font-size="9">Luma Grey</text>
+      <text x="1353" y="519" text-anchor="end" fill="#fff" font-size="14" font-weight="700">6</text><text x="1353" y="534" text-anchor="end" fill="#aaa2b5" font-size="8">plays</text>
+
+      <rect x="1021" y="551" width="348" height="48" rx="13" fill="#1b1923" stroke="#38313f"/>
+      <rect x="1030" y="561" width="27" height="27" rx="8" fill="#29263a"/><text x="1043.5" y="579" text-anchor="middle" fill="#d8d3e5" font-size="12" font-weight="700">3</text>
+      <text x="1067" y="571" fill="#f4f1fa" font-size="11" font-weight="600">Paper Moon</text><text x="1067" y="587" fill="#9691a3" font-size="9">Mira Vale</text>
+      <text x="1353" y="573" text-anchor="end" fill="#fff" font-size="14" font-weight="700">4</text><text x="1353" y="588" text-anchor="end" fill="#aaa2b5" font-size="8">plays</text>
+
+      <rect x="1021" y="605" width="348" height="48" rx="13" fill="#1b1923" stroke="#38313f"/>
+      <rect x="1030" y="615" width="27" height="27" rx="8" fill="#29263a"/><text x="1043.5" y="633" text-anchor="middle" fill="#d8d3e5" font-size="12" font-weight="700">4</text>
+      <text x="1067" y="625" fill="#f4f1fa" font-size="11" font-weight="600">Soft Lights</text><text x="1067" y="641" fill="#9691a3" font-size="9">Mira Vale</text>
+      <text x="1353" y="627" text-anchor="end" fill="#fff" font-size="14" font-weight="700">3</text><text x="1353" y="642" text-anchor="end" fill="#aaa2b5" font-size="8">plays</text>
+
+      <rect x="1021" y="659" width="348" height="48" rx="13" fill="#1b1923" stroke="#38313f"/>
+      <rect x="1030" y="669" width="27" height="27" rx="8" fill="#29263a"/><text x="1043.5" y="687" text-anchor="middle" fill="#d8d3e5" font-size="12" font-weight="700">5</text>
+      <text x="1067" y="679" fill="#f4f1fa" font-size="11" font-weight="600">Last Train Home</text><text x="1067" y="695" fill="#9691a3" font-size="9">Indigo Days</text>
+      <text x="1353" y="681" text-anchor="end" fill="#fff" font-size="14" font-weight="700">2</text><text x="1353" y="696" text-anchor="end" fill="#aaa2b5" font-size="8">plays</text>
+    </g>
+
+    <rect x="1021" y="717" width="348" height="33" rx="14" fill="#201c2a" stroke="#4b3d5d"/>
+    <text x="1195" y="738" text-anchor="middle" fill="#d7c3ff" font-family="Segoe UI,Arial,sans-serif" font-size="10" font-weight="600">View full list</text>
+    <text x="1022" y="786" fill="#b9a3ec" font-family="Segoe UI,Arial,sans-serif" font-size="9">Created by Raisul Sohan</text>
+    <text x="1367" y="786" text-anchor="end" fill="#a9a2b4" font-family="Segoe UI,Arial,sans-serif" font-size="9">Sample data</text>
+  </g>
+</svg>
