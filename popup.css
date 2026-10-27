@@ -104,6 +104,8 @@ h1 {
 }
 
 .date-weather {
+  position: relative;
+  z-index: 3;
   display: flex;
   min-height: 30px;
   align-items: center;
@@ -161,6 +163,98 @@ h1 {
   opacity: .65;
 }
 
+.weather-form {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 10;
+  width: min(300px, calc(100vw - 28px));
+  padding: 10px;
+  border: 1px solid #493b63;
+  border-radius: 12px;
+  background: #211c2d;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, .45);
+}
+
+.weather-form-heading,
+.weather-form-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.weather-form-heading {
+  justify-content: space-between;
+  margin-bottom: 7px;
+  color: #eee8ff;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.weather-form-heading button {
+  padding: 0 3px;
+  border: 0;
+  background: transparent;
+  color: #aaa2b7;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.weather-form input,
+.weather-form select {
+  min-width: 0;
+  min-height: 27px;
+  padding: 4px 7px;
+  border: 1px solid #40374f;
+  border-radius: 7px;
+  outline: 0;
+  background: #15131d;
+  color: #f4f1ff;
+  font: inherit;
+  font-size: 9px;
+}
+
+.weather-form input {
+  flex: 1;
+}
+
+.weather-form button[type="submit"],
+.weather-form #weather-use-city {
+  min-height: 27px;
+  padding: 4px 8px;
+  border: 1px solid #594777;
+  border-radius: 7px;
+  background: #35294e;
+  color: #e1d6ff;
+  cursor: pointer;
+  font-size: 9px;
+  white-space: nowrap;
+}
+
+.weather-result-label {
+  display: block;
+  margin: 8px 0 4px;
+  color: #aaa2b7;
+  font-size: 8px;
+}
+
+.weather-form select {
+  width: 100%;
+}
+
+.weather-form #weather-use-city {
+  width: 100%;
+  margin-top: 6px;
+}
+
+.weather-form p {
+  margin: 7px 0 0;
+  color: #aaa2b7;
+  font-size: 8px;
+  line-height: 1.35;
+}
+
 .weather-tools {
   display: flex;
   flex: 0 0 auto;
@@ -191,6 +285,31 @@ h1 {
   border: 1px solid rgba(174, 148, 255, .16);
   border-radius: 16px;
   background: linear-gradient(115deg, #292044, #211a31 72%, #261c36);
+}
+
+.visualizer-open {
+  display: block;
+  width: min(148px, 46%);
+  min-width: 72px;
+  max-width: 148px;
+  height: 42px;
+  flex: 1 1 100px;
+  margin: 0 6px;
+  padding: 0;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.visualizer-open:hover {
+  background: rgba(180, 143, 255, .06);
+}
+
+.music-visualizer {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 .summary-main {

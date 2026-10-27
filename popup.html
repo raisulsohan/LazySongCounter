@@ -24,11 +24,25 @@
           <strong id="date-value"></strong>
         </div>
         <div class="weather-tools">
-          <button type="button" class="weather-button" id="weather-location" aria-label="Use your location for local weather. Rounded coordinates are sent to Open-Meteo and not saved.">
-            <span id="weather-value">Add weather</span>
+          <button type="button" class="weather-button" id="weather-location" aria-label="Choose a city for local weather" aria-expanded="false" aria-controls="weather-form">
+            <span id="weather-value">Set city</span>
           </button>
           <a class="weather-source" id="weather-source" href="https://open-meteo.com/" target="_blank" rel="noreferrer" hidden>Open-Meteo</a>
         </div>
+        <form class="weather-form" id="weather-form" hidden>
+          <div class="weather-form-heading">
+            <label for="weather-city">Local weather</label>
+            <button type="button" id="weather-close" aria-label="Close weather city selector">×</button>
+          </div>
+          <div class="weather-form-row">
+            <input id="weather-city" type="search" placeholder="City or town" autocomplete="off" required>
+            <button type="submit" id="weather-search">Find</button>
+          </div>
+          <label class="weather-result-label" for="weather-results" id="weather-result-label" hidden>Choose a place</label>
+          <select id="weather-results" hidden></select>
+          <button type="button" id="weather-use-city" hidden>Use city</button>
+          <p id="weather-message" aria-live="polite">Choose a city to show its weather and local date.</p>
+        </form>
       </section>
 
       <section class="summary" aria-label="Listening summary">
@@ -37,6 +51,9 @@
           <strong id="total-listens">0</strong>
           <span class="summary-caption">plays recorded</span>
         </div>
+        <button type="button" id="visualizer-open" class="visualizer-open" title="Open the draggable music visualizer" aria-label="Open the draggable music visualizer">
+          <canvas id="music-visualizer" class="music-visualizer" width="200" height="64" aria-hidden="true"></canvas>
+        </button>
         <div class="summary-side">
           <span class="summary-icon" aria-hidden="true">♫</span>
           <strong id="unique-tracks">0</strong>
@@ -90,6 +107,8 @@
     </main>
     <script src="account.js"></script>
     <script src="weather.js"></script>
+    <script src="visualizer-core.js"></script>
+    <script src="visualizer.js"></script>
     <script src="popup.js"></script>
   </body>
 </html>

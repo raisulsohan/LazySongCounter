@@ -5,6 +5,18 @@
   let syncTimer = 0;
   let badgeTimer = 0;
   let badgeRequestId = 0;
+  let audioVideo = null;
+  let audioCaptureStream = null;
+  let audioContext = null;
+  let audioSource = null;
+  let audioAnalyser = null;
+  let audioSilenceGain = null;
+  let audioFrequencyData = null;
+  let audioResumeRequested = false;
+  let previousBassLevel = 0;
+  let lastBeatAt = 0;
+  let floatingVisualizer = null;
+  const VISUALIZER_POSITION_KEY = "lazySongCounterVisualizerPosition";
   const metadataByVideoId = new Map();
 
   window.addEventListener("message", (event) => {
@@ -32,6 +44,23 @@
 
   chrome.runtime.onMessage.addListener((message) => {
     if (message?.type === "history-updated") scheduleBadgeUpdate();
+  });
+
+  chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+    if (message?.type === "lsc-get-visualizer-frame") {
+      sendResponse(readVisualizerFrame());
+      return false;
+    }
+    if (message?.type === "lsc-stop-visualizer") {
+      if (!floatingVisualizer) releaseAudioCapture();
+      sendResponse({ ok: true });
+      return false;
+    }
+    if (message?.type === "lsc-toggle-floating-visualizer") {
+      toggleFloatingVisualizer();
+      sendResponse({ ok: true, visible: Boolean(floatingVisualizer) });
+      return false;
+    }
   });
 
   window.addEventListener("online", () => {
@@ -118,6 +147,277 @@
   function isAdPlaying() {
     const player = document.querySelector("#movie_player");
     return Boolean(player?.classList.contains("ad-showing") || player?.classList.contains("ad-interrupting"));
+  }
+
+  function readVisualizerFrame() {
+    const video = getVideoElement();
+    if (!video) {
+      releaseAudioCapture();
+      return { playing: false, hasSignal: false, bands: [] };
+    }
+    if (video !== currentVideo) syncPlayer();
+
+    const playing = !video.paused && !video.ended && !isAdPlaying();
+    if (!playing) return { playing: false, hasSignal: false, bands: [] };
+
+    ensureAudioCapture(video);
+    if (!audioAnalyser || !audioFrequencyData || audioContext?.state === "closed") {
+      return { playing: true, hasSignal: false, bands: [] };
+    }
+    if (audioContext.state === "suspended" && !audioResumeRequested) {
+      audioResumeRequested = true;
+      audioContext.resume().catch(() => {});
+    }
+    if (audioContext.state !== "running") return { playing: true, hasSignal: false, bands: [] };
+
+    audioAnalyser.getByteFrequencyData(audioFrequencyData);
+    const bandCount = 20;
+    const bands = [];
+    for (let index = 0; index < bandCount; index += 1) {
+      const lower = Math.max(1, Math.floor(2 * Math.pow(audioFrequencyData.length / 2, index / bandCount)));
+      const upper = Math.max(lower + 1, Math.floor(2 * Math.pow(audioFrequencyData.length / 2, (index + 1) / bandCount)));
+      let peak = 0;
+      let total = 0;
+      let samples = 0;
+      for (let bin = lower; bin < Math.min(upper, audioFrequencyData.length); bin += 1) {
+        const value = audioFrequencyData[bin] / 255;
+        total += value;
+        peak = Math.max(peak, value);
+        samples += 1;
+      }
+      const average = samples ? total / samples : 0;
+      bands.push(Math.min(1, Math.max(0, average * 1.5 + peak * 0.55)));
+    }
+
+    const bassLevel = bands.slice(0, 4).reduce((sum, value) => sum + value, 0) / 4;
+    const energy = bands.reduce((sum, value) => sum + value, 0) / bandCount;
+    const hasSignal = energy > 0.012;
+    const now = performance.now();
+    const beat = hasSignal && bassLevel > 0.12 && bassLevel > previousBassLevel * 1.22 && now - lastBeatAt > 190;
+    previousBassLevel = previousBassLevel * 0.62 + bassLevel * 0.38;
+    if (beat) lastBeatAt = now;
+
+    return { playing, hasSignal, bands, bassLevel, beat };
+  }
+
+  function ensureAudioCapture(video) {
+    if (audioVideo === video && audioAnalyser) return;
+    releaseAudioCapture();
+    if (typeof video.captureStream !== "function") return;
+
+    try {
+      const stream = video.captureStream();
+      if (!stream.getAudioTracks().length) {
+        stream.getTracks().forEach((track) => track.stop());
+        return;
+      }
+
+      const AudioContextConstructor = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextConstructor) {
+        stream.getTracks().forEach((track) => track.stop());
+        return;
+      }
+      audioVideo = video;
+      audioCaptureStream = stream;
+      audioContext = new AudioContextConstructor();
+      audioAnalyser = audioContext.createAnalyser();
+      audioAnalyser.fftSize = 2048;
+      audioAnalyser.smoothingTimeConstant = 0.42;
+      audioSource = audioContext.createMediaStreamSource(stream);
+      audioSource.connect(audioAnalyser);
+      audioSilenceGain = audioContext.createGain();
+      audioSilenceGain.gain.value = 0;
+      audioAnalyser.connect(audioSilenceGain);
+      audioSilenceGain.connect(audioContext.destination);
+      audioFrequencyData = new Uint8Array(audioAnalyser.frequencyBinCount);
+      audioResumeRequested = false;
+    } catch {
+      releaseAudioCapture();
+    }
+  }
+
+  function releaseAudioCapture() {
+    try {
+      audioSource?.disconnect();
+    } catch {
+      // The source may already have been detached.
+    }
+    try {
+      audioAnalyser?.disconnect();
+      audioSilenceGain?.disconnect();
+    } catch {
+      // These nodes may already have been detached.
+    }
+    audioCaptureStream?.getTracks().forEach((track) => track.stop());
+    if (audioContext && audioContext.state !== "closed") audioContext.close().catch(() => {});
+    audioVideo = null;
+    audioCaptureStream = null;
+    audioContext = null;
+    audioSource = null;
+    audioAnalyser = null;
+    audioSilenceGain = null;
+    audioFrequencyData = null;
+    audioResumeRequested = false;
+    previousBassLevel = 0;
+    lastBeatAt = 0;
+  }
+
+  function toggleFloatingVisualizer() {
+    if (floatingVisualizer) {
+      floatingVisualizer.cleanup();
+      floatingVisualizer.host.remove();
+      floatingVisualizer = null;
+      releaseAudioCapture();
+      return;
+    }
+
+    if (typeof window.LazySongVisualizer !== "function") return;
+    const host = document.createElement("div");
+    host.id = "lazy-song-counter-floating-visualizer";
+    host.setAttribute("aria-label", "Draggable music visualizer");
+    Object.assign(host.style, {
+      all: "initial",
+      display: "block",
+      position: "fixed",
+      top: "16px",
+      left: "50%",
+      transform: "translateX(-50%)",
+      width: "min(960px, 86vw)",
+      height: "42px",
+      zIndex: "2147483647",
+      cursor: "grab",
+      touchAction: "none",
+      userSelect: "none"
+    });
+
+    const shadow = host.attachShadow({ mode: "open" });
+    const style = document.createElement("style");
+    style.textContent = `
+      :host { all: initial; }
+      .bar {
+        box-sizing: border-box;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        border: 1px solid rgba(195, 170, 255, .34);
+        border-radius: 13px;
+        background: rgba(16, 14, 25, .93);
+        box-shadow: 0 10px 34px rgba(0, 0, 0, .38), 0 0 24px rgba(137, 93, 245, .12);
+        backdrop-filter: blur(14px);
+        cursor: grab;
+        touch-action: none;
+        user-select: none;
+      }
+      canvas { display: block; width: 100%; height: 100%; }
+    `;
+    const bar = document.createElement("div");
+    bar.className = "bar";
+    const canvas = document.createElement("canvas");
+    canvas.width = 960;
+    canvas.height = 42;
+    canvas.setAttribute("role", "img");
+    canvas.setAttribute("aria-label", "Music beat visualizer. Drag to move.");
+    bar.append(canvas);
+    shadow.append(style, bar);
+    document.documentElement.append(host);
+
+    const visualizer = new window.LazySongVisualizer(canvas);
+    let dragOffsetX = 0;
+    let dragOffsetY = 0;
+    let dragging = false;
+
+    const clampPosition = (left, top) => ({
+      left: Math.max(0, Math.min(window.innerWidth - host.offsetWidth, left)),
+      top: Math.max(0, Math.min(window.innerHeight - host.offsetHeight, top))
+    });
+
+    const savePosition = () => {
+      const left = parseFloat(host.style.left) || 0;
+      const top = parseFloat(host.style.top) || 0;
+      chrome.storage.local.set({
+        [VISUALIZER_POSITION_KEY]: {
+          x: window.innerWidth ? left / window.innerWidth : 0.5,
+          y: window.innerHeight ? top / window.innerHeight : 0.05
+        }
+      });
+    };
+
+    const restorePosition = () => {
+      chrome.storage.local.get(VISUALIZER_POSITION_KEY, (result) => {
+        if (floatingVisualizer?.host !== host) return;
+        const position = result[VISUALIZER_POSITION_KEY];
+        if (!position || !Number.isFinite(position.x) || !Number.isFinite(position.y)) return;
+        const { left, top } = clampPosition(position.x * window.innerWidth, position.y * window.innerHeight);
+        host.style.transform = "none";
+        host.style.left = `${left}px`;
+        host.style.top = `${top}px`;
+      });
+    };
+
+    const onPointerDown = (event) => {
+      if (event.button !== 0) return;
+      const rect = host.getBoundingClientRect();
+      dragOffsetX = event.clientX - rect.left;
+      dragOffsetY = event.clientY - rect.top;
+      host.style.transform = "none";
+      host.style.left = `${rect.left}px`;
+      host.style.top = `${rect.top}px`;
+      bar.style.cursor = "grabbing";
+      dragging = true;
+      host.setPointerCapture(event.pointerId);
+      event.preventDefault();
+      event.stopPropagation();
+    };
+
+    const onPointerMove = (event) => {
+      if (!dragging) return;
+      const { left, top } = clampPosition(event.clientX - dragOffsetX, event.clientY - dragOffsetY);
+      host.style.left = `${left}px`;
+      host.style.top = `${top}px`;
+      event.stopPropagation();
+    };
+
+    const onPointerUp = (event) => {
+      if (!dragging) return;
+      dragging = false;
+      bar.style.cursor = "grab";
+      if (host.hasPointerCapture(event.pointerId)) host.releasePointerCapture(event.pointerId);
+      savePosition();
+      event.stopPropagation();
+    };
+
+    const onResize = () => {
+      const rect = host.getBoundingClientRect();
+      const { left, top } = clampPosition(rect.left, rect.top);
+      host.style.transform = "none";
+      host.style.left = `${left}px`;
+      host.style.top = `${top}px`;
+      savePosition();
+    };
+
+    host.addEventListener("pointerdown", onPointerDown);
+    host.addEventListener("pointermove", onPointerMove);
+    host.addEventListener("pointerup", onPointerUp);
+    host.addEventListener("pointercancel", onPointerUp);
+    window.addEventListener("resize", onResize);
+
+    const pollTimer = window.setInterval(() => {
+      visualizer.setFrame(readVisualizerFrame());
+    }, 55);
+
+    floatingVisualizer = {
+      host,
+      cleanup() {
+        window.clearInterval(pollTimer);
+        window.removeEventListener("resize", onResize);
+        host.removeEventListener("pointerdown", onPointerDown);
+        host.removeEventListener("pointermove", onPointerMove);
+        host.removeEventListener("pointerup", onPointerUp);
+        host.removeEventListener("pointercancel", onPointerUp);
+        visualizer.destroy();
+      }
+    };
+    restorePosition();
   }
 
   function removePlayCountBadge() {

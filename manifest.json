@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Lazy Song Counter",
-  "version": "1.1.3",
+  "version": "1.1.4",
   "description": "Count songs you listen to on YouTube and see your most-played tracks by time period.",
   "icons": {
     "16": "icons/icon16.png",
@@ -9,7 +9,7 @@
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   },
-  "permissions": ["storage", "identity", "geolocation"],
+  "permissions": ["storage", "identity"],
   "oauth2": {
     "client_id": "284670751384-c4mfugl7vnniel96ski2s3qe1l8hdpuv.apps.googleusercontent.com",
     "scopes": [
@@ -25,6 +25,7 @@
     "https://firestore.googleapis.com/*",
     "https://api.open-meteo.com/*"
   ],
+  "optional_host_permissions": ["https://geocoding-api.open-meteo.com/*"],
   "background": {
     "service_worker": "background.js"
   },
@@ -52,7 +53,7 @@
         "https://music.youtube.com/*"
       ],
       "css": ["youtube-badge.css"],
-      "js": ["content.js"],
+      "js": ["visualizer-core.js", "content.js"],
       "run_at": "document_idle"
     }
   ]
