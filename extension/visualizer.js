@@ -4,6 +4,7 @@
   if (!canvas || !openButton || typeof window.LazySongVisualizer !== "function") return;
 
   const visualizer = new window.LazySongVisualizer(canvas);
+  const injectedTabs = new Set();
   let activeTabId = null;
   let polling = false;
 
@@ -16,6 +17,53 @@
     if (activeTabId == null) return;
     chrome.tabs.sendMessage(activeTabId, { type: "lsc-stop-visualizer" }, () => void chrome.runtime.lastError);
   });
+
+  // A YouTube tab that was open before the extension was installed, reloaded or updated has no
+  // live content script. Inject the scripts from the manifest once, then ask again.
+  function sendToTab(tabId, message, callback) {
+    chrome.tabs.sendMessage(tabId, message, (response) => {
+      const messageError = chrome.runtime.lastError;
+      if (!messageError) {
+        callback(response);
+        return;
+      }
+      if (injectedTabs.has(tabId) || !/receiving end does not exist/i.test(messageError.message || "")) {
+        callback(null);
+        return;
+      }
+      injectedTabs.add(tabId);
+      injectContentScripts(tabId).then((injected) => {
+        if (!injected) {
+          callback(null);
+          return;
+        }
+        chrome.tabs.sendMessage(tabId, message, (retryResponse) => {
+          callback(chrome.runtime.lastError ? null : retryResponse);
+        });
+      });
+    });
+  }
+
+  async function injectContentScripts(tabId) {
+    if (!chrome.scripting) return false;
+    try {
+      for (const script of chrome.runtime.getManifest().content_scripts || []) {
+        const target = { tabId };
+        if (script.css?.length) await chrome.scripting.insertCSS({ target, files: script.css });
+        if (script.js?.length) {
+          await chrome.scripting.executeScript({
+            target,
+            files: script.js,
+            world: script.world === "MAIN" ? "MAIN" : "ISOLATED"
+          });
+        }
+      }
+      return true;
+    } catch {
+      // Not a YouTube page, or the page is still loading.
+      return false;
+    }
+  }
 
   function pollActiveTab() {
     if (polling) return;
@@ -34,9 +82,8 @@
         return;
       }
 
-      chrome.tabs.sendMessage(activeTabId, { type: "lsc-get-visualizer-frame" }, (frame) => {
-        const messageError = chrome.runtime.lastError;
-        if (messageError || !frame) {
+      sendToTab(activeTabId, { type: "lsc-get-visualizer-frame" }, (frame) => {
+        if (!frame) {
           visualizer.setFrame({ playing: false, hasSignal: false, bands: [] });
           updateLabel(false, false);
         } else {
@@ -67,10 +114,9 @@
         return;
       }
 
-      chrome.tabs.sendMessage(tabId, { type: "lsc-toggle-floating-visualizer" }, (result) => {
-        const messageError = chrome.runtime.lastError;
-        if (messageError || !result?.ok) {
-          openButton.title = "Reload the extension and refresh the YouTube tab, then try again.";
+      sendToTab(tabId, { type: "lsc-toggle-floating-visualizer" }, (result) => {
+        if (!result?.ok) {
+          openButton.title = "Open a YouTube video, then click the visualizer again.";
           return;
         }
         window.close();

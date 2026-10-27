@@ -10,7 +10,7 @@
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   },
-  "permissions": ["storage", "identity", "unlimitedStorage"],
+  "permissions": ["storage", "identity", "unlimitedStorage", "scripting"],
   "oauth2": {
     "client_id": "284670751384-c4mfugl7vnniel96ski2s3qe1l8hdpuv.apps.googleusercontent.com",
     "scopes": [

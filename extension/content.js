@@ -16,11 +16,16 @@
   let audioAnalyser = null;
   let audioSilenceGain = null;
   let audioFrequencyData = null;
-  let audioResumeRequested = false;
+  let audioTrack = null;
+  let audioCapturedSrc = "";
+  let lastCaptureAttemptAt = 0;
+  let lastResumeAttemptAt = 0;
+  let silentSince = 0;
   let previousBassLevel = 0;
   let lastBeatAt = 0;
   let floatingVisualizer = null;
   const SYNC_THROTTLE_MS = 250;
+  const FLOATING_VISUALIZER_ID = "lazy-song-counter-floating-visualizer";
   const metadataByVideoId = new Map();
 
   window.addEventListener("message", (event) => {
@@ -67,6 +72,17 @@
       return false;
     }
   });
+
+  // Chrome keeps an AudioContext suspended until the page has had a user gesture, so any click or
+  // key press on the page is a new chance to start it.
+  const resumeAudioOnGesture = () => {
+    if (audioContext?.state === "suspended") audioContext.resume().catch(() => {});
+  };
+  window.addEventListener("pointerdown", resumeAudioOnGesture, true);
+  window.addEventListener("keydown", resumeAudioOnGesture, true);
+
+  // A content script from before an extension reload can leave its widget on the page.
+  document.getElementById(FLOATING_VISUALIZER_ID)?.remove();
 
   window.addEventListener("online", () => {
     try {
@@ -129,39 +145,65 @@
     if (!playing) return { playing: false, hasSignal: false, bands: [] };
 
     ensureAudioCapture(video);
-    if (!audioAnalyser || !audioFrequencyData || audioContext?.state === "closed") {
+    if (!audioAnalyser || !audioFrequencyData || !audioSource || audioContext?.state === "closed") {
       return { playing: true, hasSignal: false, bands: [] };
     }
-    if (audioContext.state === "suspended" && !audioResumeRequested) {
-      audioResumeRequested = true;
+    const now = performance.now();
+    if (audioContext.state === "suspended" && now - lastResumeAttemptAt > 1000) {
+      lastResumeAttemptAt = now;
       audioContext.resume().catch(() => {});
     }
     if (audioContext.state !== "running") return { playing: true, hasSignal: false, bands: [] };
 
     audioAnalyser.getByteFrequencyData(audioFrequencyData);
+    // Log-spaced bands from 50 Hz to 14 kHz: lower bass is felt more than seen, and streamed audio
+    // has almost nothing above 14 kHz, so those bars would always be empty.
     const bandCount = 96;
     const bands = [];
+    const binHz = audioContext.sampleRate / audioAnalyser.fftSize;
+    const lastBin = audioFrequencyData.length - 1;
     for (let index = 0; index < bandCount; index += 1) {
-      const lower = Math.max(1, Math.floor(2 * Math.pow(audioFrequencyData.length / 2, index / bandCount)));
-      const upper = Math.max(lower + 1, Math.floor(2 * Math.pow(audioFrequencyData.length / 2, (index + 1) / bandCount)));
+      const lower = 50 * Math.pow(280, index / bandCount) / binHz;
+      const upper = 50 * Math.pow(280, (index + 1) / bandCount) / binHz;
       let peak = 0;
-      let total = 0;
-      let samples = 0;
-      for (let bin = lower; bin < Math.min(upper, audioFrequencyData.length); bin += 1) {
-        const value = audioFrequencyData[bin] / 255;
-        total += value;
-        peak = Math.max(peak, value);
-        samples += 1;
+      let average = 0;
+      if (upper - lower < 1) {
+        // Narrower than one FFT bin: read between the two nearest bins, so the bass bars form a
+        // curve instead of steps.
+        const center = Math.min(lastBin - 1, (lower + upper) / 2);
+        const bin = Math.floor(center);
+        const fraction = center - bin;
+        average = (audioFrequencyData[bin] * (1 - fraction) + audioFrequencyData[bin + 1] * fraction) / 255;
+        peak = average;
+      } else {
+        let total = 0;
+        let samples = 0;
+        for (let bin = Math.floor(lower); bin < Math.min(Math.ceil(upper), lastBin + 1); bin += 1) {
+          const value = audioFrequencyData[bin] / 255;
+          total += value;
+          peak = Math.max(peak, value);
+          samples += 1;
+        }
+        average = samples ? total / samples : 0;
       }
-      const average = samples ? total / samples : 0;
-      bands.push(Math.min(1, Math.max(0, average * 1.5 + peak * 0.55)));
+      // The power curve spreads the levels, so the bars rise and fall with the music instead of
+      // sitting near the top. Higher bands carry less energy; a gentle lift keeps them alive.
+      const lift = 1 + 0.6 * index / bandCount;
+      bands.push(Math.min(1, Math.pow(average * 0.65 + peak * 0.35, 1.8) * lift));
     }
 
     const bassBandCount = Math.ceil(bandCount * 0.2);
     const bassLevel = bands.slice(0, bassBandCount).reduce((sum, value) => sum + value, 0) / bassBandCount;
     const energy = bands.reduce((sum, value) => sum + value, 0) / bandCount;
     const hasSignal = energy > 0.012;
-    const now = performance.now();
+    // When YouTube swaps the media source (a new video or an ad), the captured track can stay
+    // "live" but go silent. A long silence while the video plays starts a fresh capture.
+    if (hasSignal) silentSince = 0;
+    else if (!silentSince) silentSince = now;
+    else if (now - silentSince > 2000) {
+      silentSince = 0;
+      detachAudioSource();
+    }
     const beat = hasSignal && bassLevel > 0.12 && bassLevel > previousBassLevel * 1.22 && now - lastBeatAt > 190;
     previousBassLevel = previousBassLevel * 0.62 + bassLevel * 0.38;
     if (beat) lastBeatAt = now;
@@ -169,92 +211,118 @@
     return { playing, hasSignal, bands, bassLevel, beat };
   }
 
+  // The AudioContext lives as long as the visualizer is open; only the captured track is replaced
+  // when it ends, the video loads a new source, or the track goes silent. A new context could start suspended, a reused one keeps running.
   function ensureAudioCapture(video) {
-    if (audioVideo === video && audioAnalyser) return;
-    releaseAudioCapture();
+    if (audioVideo && audioVideo !== video) releaseAudioCapture();
+    if (audioSource && audioTrack?.readyState === "live" && audioCapturedSrc === video.currentSrc) return;
+    detachAudioSource();
     if (typeof video.captureStream !== "function") return;
+    const now = performance.now();
+    if (now - lastCaptureAttemptAt < 400) return;
+    lastCaptureAttemptAt = now;
 
     try {
       const stream = video.captureStream();
-      if (!stream.getAudioTracks().length) {
-        stream.getTracks().forEach((track) => track.stop());
+      // YouTube adds a new track to the same stream for each media source; the last one is current.
+      const track = stream.getAudioTracks().filter((candidate) => candidate.readyState === "live").pop();
+      if (!track) {
+        stream.getTracks().forEach((candidate) => candidate.stop());
         return;
       }
 
-      const AudioContextConstructor = window.AudioContext || window.webkitAudioContext;
-      if (!AudioContextConstructor) {
-        stream.getTracks().forEach((track) => track.stop());
-        return;
+      if (!audioContext || audioContext.state === "closed") {
+        const AudioContextConstructor = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextConstructor) {
+          stream.getTracks().forEach((candidate) => candidate.stop());
+          return;
+        }
+        audioContext = new AudioContextConstructor();
+        audioAnalyser = audioContext.createAnalyser();
+        audioAnalyser.fftSize = 4096;
+        audioAnalyser.smoothingTimeConstant = 0.42;
+        // YouTube audio is loud; the default -100..-30 dB window keeps most bins near the top.
+        audioAnalyser.minDecibels = -80;
+        audioAnalyser.maxDecibels = -25;
+        audioSilenceGain = audioContext.createGain();
+        audioSilenceGain.gain.value = 0;
+        audioAnalyser.connect(audioSilenceGain);
+        audioSilenceGain.connect(audioContext.destination);
+        audioFrequencyData = new Uint8Array(audioAnalyser.frequencyBinCount);
       }
       audioVideo = video;
       audioCaptureStream = stream;
-      audioContext = new AudioContextConstructor();
-      audioAnalyser = audioContext.createAnalyser();
-      audioAnalyser.fftSize = 2048;
-      audioAnalyser.smoothingTimeConstant = 0.42;
-      audioSource = audioContext.createMediaStreamSource(stream);
+      audioTrack = track;
+      audioCapturedSrc = video.currentSrc;
+      audioSource =audioContext.createMediaStreamSource(new MediaStream([track]));
       audioSource.connect(audioAnalyser);
-      audioSilenceGain = audioContext.createGain();
-      audioSilenceGain.gain.value = 0;
-      audioAnalyser.connect(audioSilenceGain);
-      audioSilenceGain.connect(audioContext.destination);
-      audioFrequencyData = new Uint8Array(audioAnalyser.frequencyBinCount);
-      audioResumeRequested = false;
+      silentSince = 0;
     } catch {
       releaseAudioCapture();
     }
   }
 
-  function releaseAudioCapture() {
+  function detachAudioSource() {
     try {
       audioSource?.disconnect();
     } catch {
       // The source may already have been detached.
     }
+    audioCaptureStream?.getTracks().forEach((track) => track.stop());
+    audioCaptureStream = null;
+    audioSource = null;
+    audioTrack = null;
+    audioCapturedSrc = "";
+  }
+
+  function releaseAudioCapture() {
+    detachAudioSource();
     try {
       audioAnalyser?.disconnect();
       audioSilenceGain?.disconnect();
     } catch {
       // These nodes may already have been detached.
     }
-    audioCaptureStream?.getTracks().forEach((track) => track.stop());
     if (audioContext && audioContext.state !== "closed") audioContext.close().catch(() => {});
     audioVideo = null;
-    audioCaptureStream = null;
     audioContext = null;
-    audioSource = null;
     audioAnalyser = null;
     audioSilenceGain = null;
     audioFrequencyData = null;
-    audioResumeRequested = false;
+    lastCaptureAttemptAt = 0;
+    silentSince = 0;
     previousBassLevel = 0;
     lastBeatAt = 0;
   }
 
+  function closeFloatingVisualizer() {
+    if (!floatingVisualizer) return;
+    floatingVisualizer.cleanup();
+    floatingVisualizer.host.remove();
+    floatingVisualizer = null;
+    releaseAudioCapture();
+  }
+
   function toggleFloatingVisualizer() {
     if (floatingVisualizer) {
-      floatingVisualizer.cleanup();
-      floatingVisualizer.host.remove();
-      floatingVisualizer = null;
-      releaseAudioCapture();
+      closeFloatingVisualizer();
       return;
     }
 
     if (typeof window.LazySongVisualizer !== "function") return;
+    document.getElementById(FLOATING_VISUALIZER_ID)?.remove();
     const host = document.createElement("div");
-    host.id = "lazy-song-counter-floating-visualizer";
+    host.id = FLOATING_VISUALIZER_ID;
     host.setAttribute("aria-label", "Draggable music visualizer");
     Object.assign(host.style, {
       all: "initial",
       display: "block",
       position: "fixed",
-      top: "16px",
-      left: "50%",
-      transform: "translateX(-50%)",
-      width: "min(960px, 86vw)",
-      height: "18px",
+      right: "24px",
+      bottom: "24px",
+      width: "min(440px, calc(100vw - 32px))",
+      height: "64px",
       zIndex: "2147483647",
-      cursor: "grab",
       touchAction: "none",
       userSelect: "none"
     });
@@ -263,42 +331,140 @@
     const style = document.createElement("style");
     style.textContent = `
       :host { all: initial; }
-      .bar {
+      .card {
+        position: relative;
         box-sizing: border-box;
         width: 100%;
         height: 100%;
         overflow: hidden;
-        border: 1px solid rgba(205, 176, 255, .45);
-        border-radius: 999px;
-        background: linear-gradient(90deg, rgba(117, 82, 223, .24), rgba(176, 107, 255, .22) 48%, rgba(80, 200, 255, .22));
-        box-shadow: 0 3px 14px rgba(0, 0, 0, .3), 0 0 16px rgba(137, 93, 245, .2);
-        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, .14);
+        border-radius: 20px;
+        background:
+          linear-gradient(180deg, rgba(255, 255, 255, .09), rgba(255, 255, 255, 0) 46%),
+          linear-gradient(115deg, rgba(40, 22, 84, .82), rgba(18, 12, 34, .8) 52%, rgba(8, 30, 48, .8));
+        box-shadow:
+          0 16px 36px rgba(0, 0, 0, .42),
+          0 2px 6px rgba(0, 0, 0, .28),
+          inset 0 1px 0 rgba(255, 255, 255, .14);
+        backdrop-filter: blur(18px) saturate(170%);
+        -webkit-backdrop-filter: blur(18px) saturate(170%);
         cursor: grab;
         touch-action: none;
         user-select: none;
+        transition: transform .2s cubic-bezier(.2, .8, .2, 1), box-shadow .2s ease, border-color .2s ease;
       }
-      canvas { display: block; width: 100%; height: 100%; }
+      .card:hover { border-color: rgba(214, 186, 255, .3); }
+      .card.dragging {
+        cursor: grabbing;
+        transform: scale(1.035);
+        border-color: rgba(214, 186, 255, .42);
+        box-shadow:
+          0 24px 52px rgba(0, 0, 0, .5),
+          0 0 30px rgba(150, 96, 255, .32),
+          inset 0 1px 0 rgba(255, 255, 255, .18);
+      }
+      canvas {
+        position: absolute;
+        top: 8px;
+        left: 18px;
+        display: block;
+        width: calc(100% - 36px);
+        height: calc(100% - 14px);
+        pointer-events: none;
+      }
+      .grip {
+        position: absolute;
+        top: 50%;
+        left: 6px;
+        width: 6px;
+        height: 16px;
+        margin-top: -8px;
+        background: radial-gradient(circle, rgba(255, 255, 255, .7) 1px, transparent 1.4px) 0 0 / 3px 4px;
+        opacity: 0;
+        transition: opacity .2s ease;
+        pointer-events: none;
+      }
+      .close {
+        position: absolute;
+        top: 7px;
+        right: 7px;
+        display: grid;
+        place-items: center;
+        width: 22px;
+        height: 22px;
+        padding: 0;
+        border: 1px solid rgba(255, 255, 255, .16);
+        border-radius: 50%;
+        background: rgba(12, 8, 24, .62);
+        color: rgba(255, 255, 255, .88);
+        cursor: pointer;
+        opacity: 0;
+        transform: scale(.85);
+        transition: opacity .18s ease, transform .18s ease, background .18s ease;
+      }
+      .close svg { width: 10px; height: 10px; }
+      .card:hover .grip,
+      .card.dragging .grip { opacity: .7; }
+      .card:hover .close,
+      .close:focus-visible { opacity: 1; transform: scale(1); }
+      .card.dragging .close { opacity: 0; }
+      .close:hover { background: rgba(255, 255, 255, .2); }
+      .close:focus-visible { outline: 2px solid #c9a8ff; outline-offset: 1px; }
     `;
-    const bar = document.createElement("div");
-    bar.className = "bar";
+    const card = document.createElement("div");
+    card.className = "card";
     const canvas = document.createElement("canvas");
-    canvas.width = 960;
-    canvas.height = 18;
     canvas.setAttribute("role", "img");
     canvas.setAttribute("aria-label", "Music beat visualizer. Drag to move.");
-    bar.append(canvas);
-    shadow.append(style, bar);
+    const grip = document.createElement("span");
+    grip.className = "grip";
+    const closeButton = document.createElement("button");
+    closeButton.type = "button";
+    closeButton.className = "close";
+    closeButton.title = "Close the visualizer";
+    closeButton.setAttribute("aria-label", "Close the visualizer");
+    // Built node by node: YouTube enforces Trusted Types, which can reject innerHTML.
+    const closeIcon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    closeIcon.setAttribute("viewBox", "0 0 10 10");
+    closeIcon.setAttribute("aria-hidden", "true");
+    const closePath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    closePath.setAttribute("d", "M1.5 1.5l7 7M8.5 1.5l-7 7");
+    closePath.setAttribute("stroke", "currentColor");
+    closePath.setAttribute("stroke-width", "1.6");
+    closePath.setAttribute("stroke-linecap", "round");
+    closeIcon.append(closePath);
+    closeButton.append(closeIcon);
+    card.append(canvas, grip, closeButton);
+    shadow.append(style, card);
     document.documentElement.append(host);
 
-    const visualizer = new window.LazySongVisualizer(canvas);
+    const visualizer = new window.LazySongVisualizer(canvas, {
+      variant: "floating",
+      source: () => {
+        // After an extension reload this script can no longer reach the extension; remove the widget.
+        if (!chrome.runtime?.id) {
+          window.setTimeout(closeFloatingVisualizer);
+          return null;
+        }
+        return readVisualizerFrame();
+      }
+    });
+    const EDGE_GAP = 8;
     let dragOffsetX = 0;
     let dragOffsetY = 0;
     let dragging = false;
 
     const clampPosition = (left, top) => ({
-      left: Math.max(0, Math.min(window.innerWidth - host.offsetWidth, left)),
-      top: Math.max(0, Math.min(window.innerHeight - host.offsetHeight, top))
+      left: Math.max(EDGE_GAP, Math.min(window.innerWidth - host.offsetWidth - EDGE_GAP, left)),
+      top: Math.max(EDGE_GAP, Math.min(window.innerHeight - host.offsetHeight - EDGE_GAP, top))
     });
+
+    const placeAt = (left, top) => {
+      host.style.right = "auto";
+      host.style.bottom = "auto";
+      host.style.left = `${left}px`;
+      host.style.top = `${top}px`;
+    };
 
     // Extension storage is closed to content scripts, so the service worker keeps the position.
     const savePosition = () => {
@@ -319,21 +485,17 @@
         const position = result?.position;
         if (!position || !Number.isFinite(position.x) || !Number.isFinite(position.y)) return;
         const { left, top } = clampPosition(position.x * window.innerWidth, position.y * window.innerHeight);
-        host.style.transform = "none";
-        host.style.left = `${left}px`;
-        host.style.top = `${top}px`;
+        placeAt(left, top);
       });
     };
 
     const onPointerDown = (event) => {
-      if (event.button !== 0) return;
+      if (event.button !== 0 || event.composedPath().includes(closeButton)) return;
       const rect = host.getBoundingClientRect();
       dragOffsetX = event.clientX - rect.left;
       dragOffsetY = event.clientY - rect.top;
-      host.style.transform = "none";
-      host.style.left = `${rect.left}px`;
-      host.style.top = `${rect.top}px`;
-      bar.style.cursor = "grabbing";
+      placeAt(rect.left, rect.top);
+      card.classList.add("dragging");
       dragging = true;
       host.setPointerCapture(event.pointerId);
       event.preventDefault();
@@ -343,48 +505,47 @@
     const onPointerMove = (event) => {
       if (!dragging) return;
       const { left, top } = clampPosition(event.clientX - dragOffsetX, event.clientY - dragOffsetY);
-      host.style.left = `${left}px`;
-      host.style.top = `${top}px`;
+      placeAt(left, top);
       event.stopPropagation();
     };
 
     const onPointerUp = (event) => {
       if (!dragging) return;
       dragging = false;
-      bar.style.cursor = "grab";
+      card.classList.remove("dragging");
       if (host.hasPointerCapture(event.pointerId)) host.releasePointerCapture(event.pointerId);
       savePosition();
       event.stopPropagation();
     };
 
     const onResize = () => {
+      if (host.style.left === "") return;
       const rect = host.getBoundingClientRect();
       const { left, top } = clampPosition(rect.left, rect.top);
-      host.style.transform = "none";
-      host.style.left = `${left}px`;
-      host.style.top = `${top}px`;
-      savePosition();
+      placeAt(left, top);
+    };
+
+    const onClose = (event) => {
+      event.stopPropagation();
+      closeFloatingVisualizer();
     };
 
     host.addEventListener("pointerdown", onPointerDown);
     host.addEventListener("pointermove", onPointerMove);
     host.addEventListener("pointerup", onPointerUp);
     host.addEventListener("pointercancel", onPointerUp);
+    closeButton.addEventListener("click", onClose);
     window.addEventListener("resize", onResize);
-
-    const pollTimer = window.setInterval(() => {
-      visualizer.setFrame(readVisualizerFrame());
-    }, 55);
 
     floatingVisualizer = {
       host,
       cleanup() {
-        window.clearInterval(pollTimer);
         window.removeEventListener("resize", onResize);
         host.removeEventListener("pointerdown", onPointerDown);
         host.removeEventListener("pointermove", onPointerMove);
         host.removeEventListener("pointerup", onPointerUp);
         host.removeEventListener("pointercancel", onPointerUp);
+        closeButton.removeEventListener("click", onClose);
         visualizer.destroy();
       }
     };
