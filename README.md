@@ -19,3 +19,4 @@ The popup shows the top 5 tracks for a quick view. Click **View full list** to o
 2. Turn on **Developer mode**.
 3. Click **Load unpacked** and select this folder.
 4. Play a song on YouTube, then open the extension popup to view your stats.
+5. After reloading the extension, refresh any YouTube tabs that were already open.

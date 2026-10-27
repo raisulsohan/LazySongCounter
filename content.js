@@ -71,6 +71,25 @@
     return Boolean(player?.classList.contains("ad-showing") || player?.classList.contains("ad-interrupting"));
   }
 
+  function isInvalidatedContext(error) {
+    return /extension context invalidated/i.test(String(error?.message || error || ""));
+  }
+
+  function sendListen(details) {
+    try {
+      chrome.runtime.sendMessage({ type: "record-listen", ...details }, () => {
+        try {
+          const error = chrome.runtime.lastError;
+          if (error && !isInvalidatedContext(error)) console.warn("Could not record listen:", error.message);
+        } catch (error) {
+          if (!isInvalidatedContext(error)) console.warn("Could not record listen:", error);
+        }
+      });
+    } catch (error) {
+      if (!isInvalidatedContext(error)) console.warn("Could not record listen:", error);
+    }
+  }
+
   function thresholdFor(video) {
     const duration = Number(video.duration);
     if (!Number.isFinite(duration) || duration <= 0) return 30;
@@ -136,11 +155,7 @@
     }
 
     session.counted = true;
-    chrome.runtime.sendMessage({ type: "record-listen", ...details }, () => {
-      // Reading lastError here prevents an unhandled extension messaging error
-      // if the service worker is reloading or the extension is being updated.
-      void chrome.runtime.lastError;
-    });
+    sendListen(details);
   }
 
   function onSeeking() {
