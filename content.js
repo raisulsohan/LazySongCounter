@@ -171,7 +171,7 @@
     if (audioContext.state !== "running") return { playing: true, hasSignal: false, bands: [] };
 
     audioAnalyser.getByteFrequencyData(audioFrequencyData);
-    const bandCount = 20;
+    const bandCount = 96;
     const bands = [];
     for (let index = 0; index < bandCount; index += 1) {
       const lower = Math.max(1, Math.floor(2 * Math.pow(audioFrequencyData.length / 2, index / bandCount)));
@@ -189,7 +189,8 @@
       bands.push(Math.min(1, Math.max(0, average * 1.5 + peak * 0.55)));
     }
 
-    const bassLevel = bands.slice(0, 4).reduce((sum, value) => sum + value, 0) / 4;
+    const bassBandCount = Math.ceil(bandCount * 0.2);
+    const bassLevel = bands.slice(0, bassBandCount).reduce((sum, value) => sum + value, 0) / bassBandCount;
     const energy = bands.reduce((sum, value) => sum + value, 0) / bandCount;
     const hasSignal = energy > 0.012;
     const now = performance.now();

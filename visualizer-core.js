@@ -1,5 +1,5 @@
 (() => {
-  const BAND_COUNT = 20;
+  const BAND_COUNT = 96;
   const NOTES = ["♪", "♫", "✦"];
 
   class LazySongVisualizer {
@@ -56,7 +56,7 @@
       if (hasPlayback && !hasAudio && now >= this.nextFallbackBeat) {
         this.triggerBeat(now);
         this.fallbackLevels = Array.from({ length: BAND_COUNT }, (_, index) => {
-          const lowBoost = index < 5 ? 0.7 : 0;
+          const lowBoost = index < 20 ? 0.7 : 0;
           return Math.random() * 0.72 + lowBoost;
         });
         this.fallbackBeatMs = 400 + Math.random() * 280;
@@ -69,7 +69,7 @@
         if (hasAudio) {
           target = Math.max(0.035, Math.min(1, Number(audioLevels[index]) || 0));
         } else if (hasPlayback) {
-          const beatShape = this.pulse * (index < 5 ? 0.56 : 0.36);
+          const beatShape = this.pulse * (index < 20 ? 0.56 : 0.36);
           target = 0.07 + this.fallbackLevels[index] * beatShape;
         } else {
           const wave = (Math.sin(now / 680 + index * 0.7) + 1) * 0.5;
@@ -118,8 +118,9 @@
         context.fillRect(0, 0, width, height);
       }
 
-      const gap = Math.max(1.6, width * 0.014);
-      const barWidth = Math.max(2, (width - gap * (BAND_COUNT - 1)) / BAND_COUNT);
+      const bandCount = Math.min(BAND_COUNT, Math.max(12, Math.floor(width / 8)));
+      const gap = Math.min(2.5, width / (bandCount * 3));
+      const barWidth = (width - gap * (bandCount - 1)) / bandCount;
       const floor = height - 2;
       const maxBarHeight = Math.max(3, height - 6);
       const gradient = context.createLinearGradient(0, 0, width, 0);
@@ -129,9 +130,16 @@
       gradient.addColorStop(1, "#45d8e8");
       context.fillStyle = gradient;
 
-      for (let index = 0; index < BAND_COUNT; index += 1) {
+      for (let index = 0; index < bandCount; index += 1) {
+        const sourceStart = Math.floor(index * BAND_COUNT / bandCount);
+        const sourceEnd = Math.max(sourceStart + 1, Math.floor((index + 1) * BAND_COUNT / bandCount));
+        let level = 0;
+        for (let sourceIndex = sourceStart; sourceIndex < sourceEnd; sourceIndex += 1) {
+          level += this.levels[sourceIndex];
+        }
+        level /= sourceEnd - sourceStart;
         const randomFlicker = 0.94 + Math.sin(now / 110 + index * 1.9) * 0.06;
-        const barHeight = Math.max(3, this.levels[index] * maxBarHeight * randomFlicker + this.pulse * (index < 4 ? 4 : 1.5));
+        const barHeight = Math.max(3, level * maxBarHeight * randomFlicker + this.pulse * (index < bandCount * 0.2 ? 4 : 1.5));
         const x = index * (barWidth + gap);
         const y = floor - Math.min(maxBarHeight, barHeight);
         const radius = Math.min(barWidth / 2, barHeight / 2);
