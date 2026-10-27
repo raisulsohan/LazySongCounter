@@ -41,8 +41,10 @@
       document.querySelector('meta[itemprop="genre"]')?.content;
     if (typeof category !== "string" || !category.trim()) return;
 
-    if (lastSent.get(currentId) === category) return;
-    lastSent.set(currentId, category);
+    const previousSend = lastSent.get(currentId);
+    const sentAt = Date.now();
+    if (previousSend?.category === category && sentAt - previousSend.sentAt < 900) return;
+    lastSent.set(currentId, { category, sentAt });
     if (lastSent.size > 100) lastSent.delete(lastSent.keys().next().value);
 
     window.postMessage({

@@ -85,13 +85,18 @@
     return previousTime >= duration - edgeWindow && currentTime <= edgeWindow;
   }
 
-  function startNextLoop(currentTime) {
-    session = {
+  function createSession(lastTime = 0) {
+    return {
       playedSeconds: 0,
       counted: false,
       notMusic: false,
-      lastTime: currentTime
+      lastTime,
+      lastWallTime: performance.now()
     };
+  }
+
+  function startNextLoop(currentTime) {
+    session = createSession(currentTime);
   }
 
   function onTimeUpdate() {
@@ -103,10 +108,15 @@
       return;
     }
 
+    const observedAt = performance.now();
+    const elapsedWallSeconds = Math.max(0, (observedAt - session.lastWallTime) / 1000);
     const delta = now - session.lastTime;
     session.lastTime = now;
+    session.lastWallTime = observedAt;
 
-    if (currentVideo.paused || isAdPlaying() || delta <= 0 || delta > 3 || session.counted || session.notMusic) return;
+    const playbackRate = Math.max(0.25, Number(currentVideo.playbackRate) || 1);
+    const maximumExpectedDelta = Math.max(3, elapsedWallSeconds * playbackRate + 1);
+    if (currentVideo.paused || currentVideo.seeking || isAdPlaying() || delta <= 0 || delta > maximumExpectedDelta || session.counted || session.notMusic) return;
 
     session.playedSeconds += delta;
     if (session.playedSeconds < thresholdFor(currentVideo)) return;
@@ -141,11 +151,12 @@
       return;
     }
     session.lastTime = now;
+    session.lastWallTime = performance.now();
   }
 
   function onEnded() {
     if (!session) return;
-    session = { playedSeconds: 0, counted: false, notMusic: false, lastTime: 0 };
+    session = createSession(currentVideo?.currentTime || 0);
   }
 
   function detachVideo() {
@@ -164,7 +175,7 @@
     const sameTrack = videoId === currentVideoId;
     if (!sameTrack) {
       currentVideoId = videoId;
-      session = { playedSeconds: 0, counted: false, notMusic: false, lastTime: video.currentTime || 0 };
+      session = createSession(video.currentTime || 0);
     }
 
     if (video === currentVideo) return;
@@ -173,8 +184,9 @@
     }
     detachVideo();
     currentVideo = video;
-    if (!session) session = { playedSeconds: 0, counted: false, notMusic: false, lastTime: video.currentTime || 0 };
+    if (!session) session = createSession(video.currentTime || 0);
     session.lastTime = video.currentTime || 0;
+    session.lastWallTime = performance.now();
     video.addEventListener("timeupdate", onTimeUpdate);
     video.addEventListener("seeking", onSeeking);
     video.addEventListener("ended", onEnded);
