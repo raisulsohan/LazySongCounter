@@ -6,7 +6,7 @@ The popup shows the top 5 tracks for a quick view. Click **View full list** to o
 
 ## Counting rules
 
-- Only videos marked with YouTube's `Music` category are counted. Videos with no category metadata are skipped.
+- Videos marked with YouTube's `Music` category are counted. `Entertainment` videos count only when the title or music keywords identify a track (such as a song, theme, BGM, or OST) and YouTube's description includes music credits or an official music-service link. Trailers, teasers, reactions, and other non-music formats stay excluded. Videos with no category metadata are skipped.
 - Titles that clearly indicate podcasts, reactions, reviews, tutorials, interviews, playlists, or full albums are skipped.
 - Videos with the same normalized title are grouped together.
 - A play counts after 30 seconds. Videos shorter than 60 seconds count after half their duration.

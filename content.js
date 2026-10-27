@@ -5,19 +5,28 @@
   let syncTimer = 0;
   let badgeTimer = 0;
   let badgeRequestId = 0;
-  const categoriesByVideoId = new Map();
+  const metadataByVideoId = new Map();
 
   window.addEventListener("message", (event) => {
     if (event.source !== window || event.origin !== location.origin) return;
     const message = event.data;
     if (message?.source !== "lazy-song-counter" || message.type !== "video-category") return;
     if (typeof message.videoId !== "string" || typeof message.category !== "string") return;
-    const previousCategory = categoriesByVideoId.get(message.videoId);
-    categoriesByVideoId.set(message.videoId, message.category);
-    if (message.videoId === currentVideoId && previousCategory !== message.category) scheduleBadgeUpdate();
-    if (categoriesByVideoId.size > 100) {
-      const oldestVideoId = categoriesByVideoId.keys().next().value;
-      categoriesByVideoId.delete(oldestVideoId);
+    const metadata = {
+      category: message.category.slice(0, 80),
+      title: typeof message.title === "string" ? message.title.slice(0, 200) : "",
+      description: typeof message.description === "string" ? message.description.slice(0, 8000) : "",
+      keywords: Array.isArray(message.keywords)
+        ? message.keywords.filter((keyword) => typeof keyword === "string").slice(0, 80)
+        : []
+    };
+    metadata.signature = JSON.stringify(metadata);
+    const previousMetadata = metadataByVideoId.get(message.videoId);
+    metadataByVideoId.set(message.videoId, metadata);
+    if (message.videoId === currentVideoId && previousMetadata?.signature !== metadata.signature) scheduleBadgeUpdate();
+    if (metadataByVideoId.size > 100) {
+      const oldestVideoId = metadataByVideoId.keys().next().value;
+      metadataByVideoId.delete(oldestVideoId);
     }
   });
 
@@ -79,7 +88,31 @@
   }
 
   function isClearlyNonSongTitle(title) {
-    return /\b(?:podcast|reaction|reacts?|review|tutorial|lesson|interview|commentary|analysis|breakdown|documentary|vlog|full album|playlist|compilation|mixtape|behind the scenes|making of|how to)\b|রিভিউ|রিঅ্যাকশন|টিউটোরিয়াল|সাক্ষাৎকার|পডকাস্ট|বিশ্লেষণ|ডকুমেন্টারি|ভ্লগ/i.test(title);
+    return /\b(?:podcast|reaction|reacts?|review|tutorial|lesson|interview|commentary|analysis|breakdown|documentary|vlog|trailer|teaser|movie scene|deleted scene|full album|playlist|compilation|mixtape|behind the scenes|making of|how to)\b|রিভিউ|রিঅ্যাকশন|টিউটোরিয়াল|সাক্ষাৎকার|পডকাস্ট|বিশ্লেষণ|ডকুমেন্টারি|ভ্লগ/i.test(title);
+  }
+
+  function classifyMusicVideo(metadata) {
+    if (!metadata?.category) return "unknown";
+    const category = metadata.category.trim().toLocaleLowerCase();
+    if (category === "music") return "music";
+    if (category !== "entertainment") return "not-music";
+
+    const title = metadata.title || "";
+    const description = metadata.description || "";
+    const keywords = Array.isArray(metadata.keywords) ? metadata.keywords : [];
+    if (!title || (!description && keywords.length === 0)) return "unknown";
+    if (isClearlyNonSongTitle(title)) return "not-music";
+
+    const trackTitleSignal = /\b(?:song|songs|theme|bgm|ost|soundtrack|music video|video song|lyrical video)\b/i.test(title);
+    const musicKeywordSignal = keywords.some((keyword) =>
+      /\b(?:song|songs|music video|video song|soundtrack|bgm|lyrical video)\b/i.test(keyword)
+    );
+    const strongCreditSignal = /\b(?:music credits?|song title|composed by|sung by|lyrics?\s*(?:by|:)|music by)\b/i.test(description);
+    const officialListenLinkSignal = /\blisten to\b[\s\S]{0,240}\b(?:music service|spotify|apple music|amazon music|youtube music)\b/i.test(description);
+
+    return (strongCreditSignal || officialListenLinkSignal) && (trackTitleSignal || musicKeywordSignal)
+      ? "music"
+      : "not-music";
   }
 
   function isAdPlaying() {
@@ -153,8 +186,8 @@
       return;
     }
 
-    const category = categoriesByVideoId.get(videoId);
-    if (!category || category.trim().toLocaleLowerCase() !== "music") {
+    const metadata = metadataByVideoId.get(videoId);
+    if (classifyMusicVideo(metadata) !== "music") {
       removePlayCountBadge();
       return;
     }
@@ -244,9 +277,10 @@
     session.playedSeconds += delta;
     if (session.playedSeconds < thresholdFor(currentVideo)) return;
 
-    const category = categoriesByVideoId.get(currentVideoId);
-    if (!category) return;
-    if (category.trim().toLocaleLowerCase() !== "music") {
+    const metadata = metadataByVideoId.get(currentVideoId);
+    const classification = classifyMusicVideo(metadata);
+    if (classification === "unknown") return;
+    if (classification !== "music") {
       session.notMusic = true;
       return;
     }

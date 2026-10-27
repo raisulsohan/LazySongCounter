@@ -37,21 +37,33 @@
       const category = candidate?.microformat?.playerMicroformatRenderer?.category;
       return typeof category === "string" && category.trim();
     });
+    const videoDetails = response?.videoDetails || {};
     const category = response?.microformat?.playerMicroformatRenderer?.category ||
       document.querySelector('meta[itemprop="genre"]')?.content;
     if (typeof category !== "string" || !category.trim()) return;
 
+    const metadata = {
+      category: category.trim(),
+      title: typeof videoDetails.title === "string" ? videoDetails.title.slice(0, 200) : "",
+      description: typeof videoDetails.shortDescription === "string"
+        ? videoDetails.shortDescription.slice(0, 8000)
+        : "",
+      keywords: Array.isArray(videoDetails.keywords)
+        ? videoDetails.keywords.filter((keyword) => typeof keyword === "string").slice(0, 80)
+        : []
+    };
+    const signature = JSON.stringify(metadata);
     const previousSend = lastSent.get(currentId);
     const sentAt = Date.now();
-    if (previousSend?.category === category && sentAt - previousSend.sentAt < 900) return;
-    lastSent.set(currentId, { category, sentAt });
+    if (previousSend?.signature === signature && sentAt - previousSend.sentAt < 900) return;
+    lastSent.set(currentId, { signature, sentAt });
     if (lastSent.size > 100) lastSent.delete(lastSent.keys().next().value);
 
     window.postMessage({
       source: "lazy-song-counter",
       type: "video-category",
       videoId: currentId,
-      category
+      ...metadata
     }, location.origin);
   }
 
