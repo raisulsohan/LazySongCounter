@@ -13,7 +13,8 @@ Open the extension popup to see listening totals and your top five songs. Click 
 ## Counting rules
 
 - Videos marked with YouTube's `Music` category are counted. `Entertainment` and `People & Blogs` videos count only when the title and description contain clear music signals, such as song credits, an official music-service link, or a clearly labeled lo-fi/mashup/slowed-reverb mix. Trailers, teasers, reactions, and other non-music formats stay excluded. Videos with no category metadata are skipped.
-- Titles that clearly indicate podcasts, reactions, reviews, tutorials, interviews, playlists, or full albums are skipped.
+- Titles that clearly indicate podcasts, reactions, reviews, tutorials, interviews, playlists, or compilations are skipped.
+- A full album or jukebox video (`Full Album`, `Audio Jukebox`, `Video Jukebox`) counts as one play of the album, named after the `Album:` credit in the description or the first part of the title, for example `Ekhon Ami (Album)`.
 - Plays of the same song are grouped together. Upload labels such as `(Official Video)`, `[Lyrics]`, `| Official Audio` and featured-artist credits are ignored. When the title does not name the artist (`Artist - Song`), the channel name is added, so songs with the same title by different artists stay apart. Words such as `Live` or `Remix` are kept.
 - A play counts after 30 seconds. Videos shorter than 60 seconds count after half their duration.
 - Pausing and resuming does not create another play. Replaying or looping a song starts a new play session.

@@ -2,7 +2,7 @@
 (function (root) {
   "use strict";
 
-  const NON_SONG_TITLE = /\b(?:podcast|reaction|reacts?|review|tutorial|lesson|interview|commentary|analysis|breakdown|documentary|vlog|trailer|teaser|movie scene|deleted scene|full album|playlist|compilation|mixtape|behind the scenes|making of|how to)\b|রিভিউ|রিঅ্যাকশন|টিউটোরিয়াল|সাক্ষাৎকার|পডকাস্ট|বিশ্লেষণ|ডকুমেন্টারি|ভ্লগ/i;
+  const NON_SONG_TITLE = /\b(?:podcast|reaction|reacts?|review|tutorial|lesson|interview|commentary|analysis|breakdown|documentary|vlog|trailer|teaser|movie scene|deleted scene|playlist|compilation|mixtape|behind the scenes|making of|how to)\b|রিভিউ|রিঅ্যাকশন|টিউটোরিয়াল|সাক্ষাৎকার|পডকাস্ট|বিশ্লেষণ|ডকুমেন্টারি|ভ্লগ/i;
 
   // Upload labels that do not change which song it is: "(Official Video)", "[Lyrics]", "(Audio)" and so on.
   const LABEL_WORDS = String.raw`(?:official\s*)?(?:music\s*|lyrics?\s*|lyrical\s*|hd\s*|4k\s*)?(?:video|audio|visuali[sz]er|mv)(?:\s*song)?|official|lyrics?|lyrical|audio(?:\s*only)?|video\s*song|hd|hq|4k|full\s*(?:video|song|audio)|explicit|clean\s*version|remaster(?:ed)?(?:\s*\d{4})?|\d{4}\s*remaster(?:ed)?`;
@@ -11,6 +11,9 @@
   const BRACKETED_FEATURE = /[\[(（]\s*(?:feat|ft|featuring)\.?\s[^\])）]*[\])）]/gi;
   const TRAILING_FEATURE = /\s+(?:feat|ft|featuring)\.?\s+[^-–—|]*$/i;
   const ARTIST_SEPARATOR = /\s[-–—]\s/;
+  // Full albums and jukeboxes count as one play of the album.
+  const ALBUM_LABEL = /[\[(（]?\s*\b(?:full\s*(?:audio\s*)?album|(?:audio|video|mp3)?\s*jukebox)\b\s*[\])）]?/gi;
+  const ALBUM_CREDIT = /^\s*album(?:\s*name)?\s*[:：\-–—]\s*(.+?)\s*$/im;
 
   function cleanText(value, maxLength) {
     return String(value || "")
@@ -72,6 +75,25 @@
     return key.slice(0, 240);
   }
 
+  function isAlbumTitle(title) {
+    ALBUM_LABEL.lastIndex = 0;
+    const result = ALBUM_LABEL.test(String(title || ""));
+    ALBUM_LABEL.lastIndex = 0;
+    return result;
+  }
+
+  // "Ekhon Ami | Sumon & Anila | Full Album | Audio Jukebox" -> "Ekhon Ami (Album)".
+  // An "Album: …" credit in the description wins over the title.
+  function albumTitleFor(title, description = "") {
+    const credit = String(description || "").match(ALBUM_CREDIT)?.[1];
+    const fromTitle = String(title || "")
+      .split(/\s*[|｜]\s*/)
+      .map((part) => part.replace(ALBUM_LABEL, " ").replace(/\s+/g, " ").replace(/^[\s\-–—:]+|[\s\-–—:]+$/g, ""))
+      .find(Boolean);
+    const name = cleanText(credit || fromTitle || title, 180);
+    return name ? `${name} (Album)` : "";
+  }
+
   function isClearlyNonSongTitle(title) {
     return NON_SONG_TITLE.test(String(title || ""));
   }
@@ -123,6 +145,8 @@
     normalizeText,
     stripTitleLabels,
     trackKeyFor,
+    isAlbumTitle,
+    albumTitleFor,
     isClearlyNonSongTitle,
     classifyMusicVideo,
     playThreshold,

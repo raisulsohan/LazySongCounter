@@ -89,3 +89,19 @@ test("a jump from the end back to the start is a loop", () => {
   assert.ok(!Rules.isPlaybackWrap(10, 20, 240));
   assert.ok(!Rules.isPlaybackWrap(238, 0.5, NaN));
 });
+
+test("full albums and jukeboxes count under the album name", () => {
+  const title = "Ekhon Ami | Sumon & Anila | Topu | Full Album | Audio Jukebox";
+  assert.ok(Rules.isAlbumTitle(title));
+  assert.ok(!Rules.isClearlyNonSongTitle(title));
+  assert.equal(Rules.albumTitleFor(title, "Singer : Sumon & Anila\nAlbum : Ekhon Ami\nLyric : Topu"), "Ekhon Ami (Album)");
+  assert.equal(Rules.albumTitleFor(title), "Ekhon Ami (Album)");
+  assert.equal(Rules.albumTitleFor("Artist - Album Name (Full Album)"), "Artist - Album Name (Album)");
+  assert.equal(Rules.albumTitleFor("Best Of Artist [Video Jukebox]"), "Best Of Artist (Album)");
+});
+
+test("ordinary titles are not albums", () => {
+  assert.ok(!Rules.isAlbumTitle("Adele - Hello (Official Music Video)"));
+  assert.ok(!Rules.isAlbumTitle("Jukeboxer - Song"));
+  assert.ok(Rules.isClearlyNonSongTitle("Top 50 Songs Playlist"));
+});

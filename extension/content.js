@@ -93,12 +93,16 @@
     // The player data for this exact video is the most reliable source. The page heading can still
     // show the previous video for a moment after a navigation.
     const metadata = metadataByVideoId.get(videoId);
-    const title = Rules.cleanTitle(
+    const videoTitle = Rules.cleanTitle(
       metadata?.title ||
       document.querySelector("ytd-watch-metadata h1 yt-formatted-string")?.textContent ||
       document.querySelector('meta[name="title"]')?.content ||
       document.title
     );
+    // A full album or jukebox counts as one play under the album's name.
+    const title = Rules.isAlbumTitle(videoTitle)
+      ? Rules.albumTitleFor(videoTitle, metadata?.description)
+      : videoTitle;
     const channel = (metadata?.author ||
       document.querySelector("ytd-watch-metadata ytd-channel-name a")?.textContent ||
       document.querySelector("ytmusic-player-bar .byline a")?.textContent || "")

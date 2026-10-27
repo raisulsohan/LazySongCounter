@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Lazy Song Counter",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAoxpt0Vb+pir81rl820DMVtlSBl4cgnwJ/nl5kbTKNY/8wXZ6fPRt9o2LpNkUMWnoTS3bKlVGUzRojDmkr9lHYSeSI8SHIBRQvHHDL/bgoLB1RXuC2Xp4mtOoo/sYCZyvn16DR7Xky/M6coT7RzHAv9lqFMI/aaSoY70T62QCP2cO767B/YgvNFj1crCXNg3/FO+e0JRnJcqFgMDQ24iLyDUQouVTGy1o6nMNe2mnYfaKKd4JGvP1xO7xtyNUE0gofr/ftNPEh8ve7lL026BgLS74wstOnFHL2gNSleqjhxP9wn0FYyAa2lr6okTzIFr0fJblf4WnE9fjVlCoUmGSRQIDAQAB",
   "description": "Count songs you listen to on YouTube and see your most-played tracks by time period.",
   "icons": {
