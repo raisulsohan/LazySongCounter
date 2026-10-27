@@ -124,7 +124,7 @@
     if (!metadata?.category) return "unknown";
     const category = metadata.category.trim().toLocaleLowerCase();
     if (category === "music") return "music";
-    if (category !== "entertainment") return "not-music";
+    if (category !== "entertainment" && category !== "people & blogs") return "not-music";
 
     const title = metadata.title || "";
     const description = metadata.description || "";
@@ -136,10 +136,13 @@
     const musicKeywordSignal = keywords.some((keyword) =>
       /\b(?:song|songs|music video|video song|soundtrack|bgm|lyrical video)\b/i.test(keyword)
     );
+    const musicMixSignal = /\b(?:lo[\s-]?fi|mashup|slowed\s*(?:&|and)\s*reverb)\b/i.test(title) &&
+      /\b(?:songs?|music|melodies|beats?|lo[\s-]?fi|mashup)\b/i.test(description);
     const strongCreditSignal = /\b(?:music credits?|song title|song name|singer|vocals?|lyricist)\s*[-–—:]\s*\S|\b(?:composed|sung)\s+by\b|\b(?:lyrics?|music)\s*(?:by|[-–—:])\s*\S/i.test(description);
     const officialListenLinkSignal = /\blisten to\b[\s\S]{0,240}\b(?:music service|spotify|apple music|amazon music|youtube music)\b/i.test(description);
 
-    return (strongCreditSignal || officialListenLinkSignal) && (trackTitleSignal || musicKeywordSignal)
+    return (strongCreditSignal || officialListenLinkSignal || musicMixSignal) &&
+      (trackTitleSignal || musicKeywordSignal || musicMixSignal)
       ? "music"
       : "not-music";
   }
