@@ -1,0 +1,26 @@
+[data-lsc-play-count-badge] {
+  box-sizing: border-box !important;
+  display: inline-flex !important;
+  flex: 0 0 auto !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  height: 36px !important;
+  margin-right: 8px !important;
+  padding: 0 12px !important;
+  border: 0 !important;
+  border-radius: 18px !important;
+  background: var(--yt-spec-badge-chip-background, #272727) !important;
+  color: var(--yt-spec-text-primary, #f1f1f1) !important;
+  font-family: Roboto, Arial, sans-serif !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  line-height: 20px !important;
+  white-space: nowrap !important;
+}
+
+[data-lsc-play-count-badge] .lsc-play-count-icon {
+  color: #c9b5ff !important;
+  font-size: 16px !important;
+  line-height: 1 !important;
+}

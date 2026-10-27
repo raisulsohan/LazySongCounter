@@ -1,8 +1,12 @@
 (() => {
+  const STORAGE_KEY = "lazySongCounterData";
   let currentVideoId = "";
   let currentVideo = null;
   let session = null;
   let syncTimer = 0;
+  let badgeTimer = 0;
+  let badgeRequestId = 0;
+  let cachedListens = null;
   const categoriesByVideoId = new Map();
 
   window.addEventListener("message", (event) => {
@@ -10,11 +14,20 @@
     const message = event.data;
     if (message?.source !== "lazy-song-counter" || message.type !== "video-category") return;
     if (typeof message.videoId !== "string" || typeof message.category !== "string") return;
+    const previousCategory = categoriesByVideoId.get(message.videoId);
     categoriesByVideoId.set(message.videoId, message.category);
+    if (message.videoId === currentVideoId && previousCategory !== message.category) scheduleBadgeUpdate();
     if (categoriesByVideoId.size > 100) {
       const oldestVideoId = categoriesByVideoId.keys().next().value;
       categoriesByVideoId.delete(oldestVideoId);
     }
+  });
+
+  chrome.storage.onChanged.addListener((changes, areaName) => {
+    if (areaName !== "local" || !changes[STORAGE_KEY]) return;
+    const listens = changes[STORAGE_KEY].newValue?.listens;
+    cachedListens = Array.isArray(listens) ? listens : [];
+    scheduleBadgeUpdate();
   });
 
   function getVideoId() {
@@ -69,6 +82,99 @@
   function isAdPlaying() {
     const player = document.querySelector("#movie_player");
     return Boolean(player?.classList.contains("ad-showing") || player?.classList.contains("ad-interrupting"));
+  }
+
+  function removePlayCountBadge() {
+    document.querySelectorAll("[data-lsc-play-count-badge]").forEach((badge) => badge.remove());
+  }
+
+  function getLikeActionsContainer() {
+    return document.querySelector("ytd-watch-metadata #actions #top-level-buttons-computed") ||
+      document.querySelector("ytd-watch-metadata #top-level-buttons-computed") ||
+      document.querySelector("#top-level-buttons-computed");
+  }
+
+  function renderPlayCountBadge(count, title) {
+    const container = getLikeActionsContainer();
+    if (!container) return;
+
+    let badge = document.getElementById("lsc-play-count-badge");
+    if (badge && badge.parentElement !== container) {
+      badge.remove();
+      badge = null;
+    }
+    if (!badge) {
+      badge = document.createElement("div");
+      badge.id = "lsc-play-count-badge";
+      badge.dataset.lscPlayCountBadge = "";
+      badge.setAttribute("role", "status");
+    }
+
+    const countText = `${new Intl.NumberFormat("en-US").format(count)} played`;
+    const accessibleLabel = `${count} plays for ${title}`;
+    if (badge.dataset.playCount !== String(count) || badge.dataset.trackTitle !== title) {
+      const icon = document.createElement("span");
+      icon.className = "lsc-play-count-icon";
+      icon.setAttribute("aria-hidden", "true");
+      icon.textContent = "♫";
+      const label = document.createElement("span");
+      label.textContent = countText;
+      badge.replaceChildren(icon, label);
+      badge.dataset.playCount = String(count);
+      badge.dataset.trackTitle = title;
+      badge.title = `Your local play count for ${title}`;
+      badge.setAttribute("aria-label", accessibleLabel);
+    }
+
+    const likeButton = container.querySelector(
+      "ytd-segmented-like-dislike-button-renderer, segmented-like-dislike-button-view-model, #segmented-like-button"
+    );
+    if (badge.parentElement !== container) {
+      if (likeButton?.parentElement === container) container.insertBefore(badge, likeButton);
+      else container.prepend(badge);
+    } else if (likeButton?.parentElement === container && badge.nextElementSibling !== likeButton) {
+      container.insertBefore(badge, likeButton);
+    }
+  }
+
+  function scheduleBadgeUpdate() {
+    window.clearTimeout(badgeTimer);
+    badgeTimer = window.setTimeout(updatePlayCountBadge, 150);
+  }
+
+  async function updatePlayCountBadge() {
+    const requestId = ++badgeRequestId;
+    const videoId = getVideoId();
+    if (!videoId || videoId !== currentVideoId) {
+      removePlayCountBadge();
+      return;
+    }
+
+    const category = categoriesByVideoId.get(videoId);
+    if (!category || category.trim().toLocaleLowerCase() !== "music") {
+      removePlayCountBadge();
+      return;
+    }
+
+    const details = getTrackDetails(videoId);
+    if (!details.title || isClearlyNonSongTitle(details.title)) {
+      removePlayCountBadge();
+      return;
+    }
+
+    try {
+      if (cachedListens === null) {
+        const stored = await chrome.storage.local.get(STORAGE_KEY);
+        if (cachedListens === null) {
+          cachedListens = Array.isArray(stored[STORAGE_KEY]?.listens) ? stored[STORAGE_KEY].listens : [];
+        }
+      }
+      if (requestId !== badgeRequestId || videoId !== currentVideoId) return;
+      const count = cachedListens.filter((item) => item.trackKey === details.trackKey).length;
+      renderPlayCountBadge(count, details.title);
+    } catch (error) {
+      if (!isInvalidatedContext(error)) console.warn("Could not read the local play count:", error);
+    }
   }
 
   function isInvalidatedContext(error) {
@@ -209,7 +315,10 @@
 
   function scheduleSync() {
     window.clearTimeout(syncTimer);
-    syncTimer = window.setTimeout(syncPlayer, 120);
+    syncTimer = window.setTimeout(() => {
+      syncPlayer();
+      scheduleBadgeUpdate();
+    }, 120);
   }
 
   document.addEventListener("yt-navigate-finish", scheduleSync);
@@ -220,4 +329,5 @@
     subtree: true
   });
   syncPlayer();
+  scheduleBadgeUpdate();
 })();

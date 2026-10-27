@@ -2,7 +2,7 @@
 
 A Manifest V3 Chrome extension that tracks listening activity on YouTube and YouTube Music. The popup ranks your most-played tracks for today, this week, this month, this year, or all time.
 
-The popup shows the top 5 tracks for a quick view. Click **View full list** to open the searchable, paginated Song Library in a separate tab. The library opens to **Today** by default.
+The popup shows the top 5 tracks for a quick view. Click **View full list** to open the searchable, paginated Song Library in a separate tab. The library opens to **Today** by default. On eligible YouTube watch pages, a local `N played` badge appears beside the Like control.
 
 ## Counting rules
 
