@@ -136,7 +136,7 @@
     const musicKeywordSignal = keywords.some((keyword) =>
       /\b(?:song|songs|music video|video song|soundtrack|bgm|lyrical video)\b/i.test(keyword)
     );
-    const strongCreditSignal = /\b(?:music credits?|song title|composed by|sung by|lyrics?\s*(?:by|:)|music by)\b/i.test(description);
+    const strongCreditSignal = /\b(?:music credits?|song title|song name|singer|vocals?|lyricist)\s*[-–—:]\s*\S|\b(?:composed|sung)\s+by\b|\b(?:lyrics?|music)\s*(?:by|[-–—:])\s*\S/i.test(description);
     const officialListenLinkSignal = /\blisten to\b[\s\S]{0,240}\b(?:music service|spotify|apple music|amazon music|youtube music)\b/i.test(description);
 
     return (strongCreditSignal || officialListenLinkSignal) && (trackTitleSignal || musicKeywordSignal)
