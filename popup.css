@@ -25,7 +25,7 @@ button {
 }
 
 .app {
-  padding: 10px 14px 8px;
+  padding: 7px 14px 6px;
 }
 
 .header {
@@ -36,8 +36,8 @@ button {
 
 .brand-mark {
   display: grid;
-  width: 33px;
-  height: 33px;
+  width: 30px;
+  height: 30px;
   place-items: center;
   border-radius: 11px;
   background: linear-gradient(145deg, #a27bff, #6840ed);
@@ -87,8 +87,8 @@ h1 {
 }
 
 .icon-button {
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
   border: 1px solid #302b40;
   border-radius: 11px;
   background: #1c1928;
@@ -105,12 +105,12 @@ h1 {
 
 .date-weather {
   display: flex;
-  min-height: 34px;
+  min-height: 30px;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  margin-top: 7px;
-  padding: 4px 9px;
+  margin-top: 4px;
+  padding: 3px 8px;
   border: 1px solid #2c2837;
   border-radius: 10px;
   background: rgba(23, 21, 32, .82);
@@ -184,9 +184,9 @@ h1 {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  min-height: 70px;
-  margin-top: 9px;
-  padding: 9px 13px;
+  min-height: 64px;
+  margin-top: 7px;
+  padding: 8px 12px;
   overflow: hidden;
   border: 1px solid rgba(174, 148, 255, .16);
   border-radius: 16px;
@@ -209,7 +209,7 @@ h1 {
 .summary-main strong {
   margin: 1px 0 -1px;
   color: #fff;
-  font-size: 30px;
+  font-size: 28px;
   font-weight: 700;
   line-height: 1.2;
 }
@@ -239,7 +239,7 @@ h1 {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   gap: 4px;
-  margin: 8px 0 8px;
+  margin: 5px 0;
   padding: 3px;
   border: 1px solid #292536;
   border-radius: 13px;
@@ -247,7 +247,7 @@ h1 {
 }
 
 .periods button {
-  min-height: 27px;
+  min-height: 24px;
   padding: 2px 3px;
   border: 0;
   border-radius: 9px;
@@ -264,13 +264,13 @@ h1 {
 
 .cloud-account {
   display: flex;
-  min-height: 28px;
+  min-height: 26px;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  margin-top: -4px;
-  margin-bottom: 6px;
-  padding: 3px 8px;
+  margin-top: -3px;
+  margin-bottom: 4px;
+  padding: 2px 7px;
   border: 1px solid #302b40;
   border-radius: 11px;
   background: rgba(28, 25, 40, .78);
@@ -341,7 +341,7 @@ h1 {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 
 .section-heading .eyebrow {
@@ -366,14 +366,14 @@ h2 {
 .track-list {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
 }
 
 .view-all {
   display: block;
   width: 100%;
-  margin-top: 5px;
-  padding: 6px 10px;
+  margin-top: 4px;
+  padding: 5px 10px;
   border: 1px solid #393149;
   border-radius: 11px;
   background: #1b1825;
@@ -390,11 +390,11 @@ h2 {
 
 .track-card {
   display: grid;
-  grid-template-columns: 25px 1fr auto;
+  grid-template-columns: 22px 1fr auto;
   align-items: center;
   gap: 8px;
-  min-height: 43px;
-  padding: 5px 7px;
+  min-height: 38px;
+  padding: 4px 6px;
   border: 1px solid #2b2736;
   border-radius: 12px;
   background: #191722;
@@ -408,8 +408,8 @@ h2 {
 
 .rank {
   display: grid;
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
   place-items: center;
   border-radius: 8px;
   background: #282338;
@@ -431,7 +431,7 @@ h2 {
   display: block;
   overflow: hidden;
   color: #f2eff9;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
   text-decoration: none;
   text-overflow: ellipsis;
@@ -444,10 +444,10 @@ h2 {
 
 .track-channel {
   display: block;
-  margin-top: 2px;
+  margin-top: 1px;
   overflow: hidden;
   color: #8f899e;
-  font-size: 9px;
+  font-size: 8px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -511,16 +511,16 @@ h2 {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-top: 7px;
-  padding-top: 6px;
+  margin-top: 4px;
+  padding-top: 4px;
   border-top: 1px solid #282531;
 }
 
 .footer p {
   margin: 0;
   color: #827b91;
-  font-size: 9px;
-  line-height: 1.5;
+  font-size: 8px;
+  line-height: 1.3;
 }
 
 .footer .creator {
