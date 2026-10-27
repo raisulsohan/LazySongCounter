@@ -25,14 +25,20 @@ The popup shows today's date using the browser's local time zone. Choose a city 
 
 The visualizer reads frequency levels from the active YouTube player when the browser allows media capture. It does not route or change playback audio. If a page does not expose an audio signal, it uses a randomized rhythmic animation instead.
 
-## Set up Google cloud backup
+## Google cloud backup
 
-Cloud backup uses Firebase Authentication, Cloud Firestore, and Chrome's Google sign-in. This build is configured for Firebase project `lazy-song-counter`; each signed-in Google account gets its own UID-scoped history. The Chrome Extension OAuth client is bound to unpacked extension ID `oaomgimboekepjcjnaaappfkinddmdgg`. A fork or a Chrome Web Store build with a different extension ID needs its own OAuth client. Firebase Web app values and OAuth client IDs are public identifiers; no service account key or private OAuth secret belongs in this extension.
+Cloud backup is ready to use. Install the extension, open the popup and click **Connect**, then choose any Google account. Nothing else needs to be set up.
 
-1. For a separate deployment, create a project in the [Firebase Console](https://console.firebase.google.com/) and register a Web app. Copy its **Web API key** and **Project ID** into `firebase-config.js`.
+It uses Firebase Authentication, Cloud Firestore, and Chrome's Google sign-in with the Firebase project `lazy-song-counter`; each signed-in Google account gets its own UID-scoped history. The `key` in `manifest.json` gives the extension the same ID, `iaocohnolcopmegaegfnoedobbacflmf`, on every computer, and the Chrome Extension OAuth client is registered for that ID. Firebase Web app values, OAuth client IDs and the manifest key are public identifiers; no service account key, private OAuth secret or private signing key belongs in this extension.
+
+### Run your own Firebase project
+
+These steps are only for a fork that uses its own Firebase project.
+
+1. Create a project in the [Firebase Console](https://console.firebase.google.com/) and register a Web app. Copy its **Web API key** and **Project ID** into `firebase-config.js`. create a project in the [Firebase Console](https://console.firebase.google.com/) and register a Web app. Copy its **Web API key** and **Project ID** into `firebase-config.js`.
 2. In Firebase Authentication, enable the **Google** provider.
 3. Create a **Cloud Firestore** database. Open **Firestore Database → Rules**, replace the rules with the contents of `firestore.rules`, and publish them. Publish them again after every update of this file; version 1.2.0 needs the new rules for the `meta/state` document and the `uploadedAt` field, or sync stops with an "access was denied" message.
-4. Load the extension in Chrome using the steps below. Then open `chrome://extensions`, turn on **Developer mode**, and copy the extension ID shown for Lazy Song Counter.
+4. Load the extension in Chrome using the steps below. Then open `chrome://extensions`, turn on **Developer mode**, and copy the extension ID shown for Lazy Song Counter. To get your own fixed ID, replace the `key` in `manifest.json` with the public key of a key pair you create.
 5. In Google Cloud Console, create an OAuth client ID with application type **Chrome Extension** and register that extension ID. Copy the client ID into `manifest.json`, replacing `YOUR_CHROME_EXTENSION_OAUTH_CLIENT_ID.apps.googleusercontent.com`.
 6. In Google Cloud Console, open **APIs & Services → Credentials**, edit the Firebase **Web API key**, and set **API restrictions** to *Identity Toolkit API*, *Token Service API* and *Cloud Firestore API*. The key is public, so this limits what it can be used for.
 7. Reload the extension in `chrome://extensions`, refresh open YouTube tabs, then click **Connect** in the extension and choose your Google account.
