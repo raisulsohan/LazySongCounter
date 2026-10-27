@@ -33,12 +33,20 @@ document.querySelector("#view-all").addEventListener("click", () => {
 });
 
 document.querySelector("#clear-history").addEventListener("click", async () => {
-  if (!allListens.length) {
+  const account = await sendBackgroundMessage({ type: "get-account-state" });
+  if (!allListens.length && !account?.signedIn) {
     showToast("There is no history to clear.");
     return;
   }
-  if (!confirm("Clear all listening history? This cannot be undone.")) return;
-  await chrome.storage.local.set({ [STORAGE_KEY]: { listens: [] } });
+  const confirmation = account?.signedIn
+    ? "Clear listening history from this browser and your connected cloud account? This cannot be undone."
+    : "Clear this browser's listening history? A cloud copy, if any, will remain in your account. This cannot be undone.";
+  if (!confirm(confirmation)) return;
+  const result = await sendBackgroundMessage({ type: "clear-listening-history" });
+  if (!result?.ok) {
+    showToast(result?.error || "Could not clear listening history.");
+    return;
+  }
   allListens = [];
   render();
   showToast("Listening history cleared.");
@@ -155,6 +163,15 @@ function showToast(message) {
   toast.classList.add("visible");
   window.clearTimeout(toastTimer);
   toastTimer = window.setTimeout(() => toast.classList.remove("visible"), 2600);
+}
+
+function sendBackgroundMessage(message) {
+  return new Promise((resolve) => {
+    chrome.runtime.sendMessage(message, (response) => {
+      const error = chrome.runtime.lastError;
+      resolve(error ? { ok: false, error: error.message } : response);
+    });
+  });
 }
 
 loadData();

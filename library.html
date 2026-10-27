@@ -45,6 +45,18 @@
         </article>
       </section>
 
+      <section class="cloud-panel" aria-label="Cloud backup">
+        <div class="cloud-copy">
+          <strong id="cloud-status">Local history only</strong>
+          <span id="cloud-details">Connect Google to back up and sync your listening history across Chrome profiles.</span>
+        </div>
+        <div class="cloud-actions">
+          <button type="button" id="cloud-sign-in">Connect Google</button>
+          <button type="button" id="cloud-sync" hidden>Sync now</button>
+          <button type="button" id="cloud-sign-out" hidden>Sign out</button>
+        </div>
+      </section>
+
       <section class="library-panel">
         <div class="toolbar">
           <nav class="periods" aria-label="Filter by time period">
@@ -89,10 +101,11 @@
       </section>
 
       <footer class="footer">
-        <span>Only YouTube videos marked as Music are counted. A play counts after 30 seconds, or half the song if it is under 60 seconds. History stays in this browser.</span>
+        <span>Only YouTube videos marked as Music are counted. A play counts after 30 seconds, or half the song if it is under 60 seconds. You can back up history with Google sign-in.</span>
         <span class="creator">Created by <a href="https://raisulsohan.com/en/portfolio/" target="_blank" rel="noreferrer">Raisul Sohan</a></span>
       </footer>
     </main>
+    <script src="account.js"></script>
     <script src="library.js"></script>
   </body>
 </html>

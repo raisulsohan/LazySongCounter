@@ -1,12 +1,10 @@
 (() => {
-  const STORAGE_KEY = "lazySongCounterData";
   let currentVideoId = "";
   let currentVideo = null;
   let session = null;
   let syncTimer = 0;
   let badgeTimer = 0;
   let badgeRequestId = 0;
-  let cachedListens = null;
   const categoriesByVideoId = new Map();
 
   window.addEventListener("message", (event) => {
@@ -23,11 +21,16 @@
     }
   });
 
-  chrome.storage.onChanged.addListener((changes, areaName) => {
-    if (areaName !== "local" || !changes[STORAGE_KEY]) return;
-    const listens = changes[STORAGE_KEY].newValue?.listens;
-    cachedListens = Array.isArray(listens) ? listens : [];
-    scheduleBadgeUpdate();
+  chrome.runtime.onMessage.addListener((message) => {
+    if (message?.type === "history-updated") scheduleBadgeUpdate();
+  });
+
+  window.addEventListener("online", () => {
+    try {
+      chrome.runtime.sendMessage({ type: "sync-if-signed-in" }, () => void chrome.runtime.lastError);
+    } catch (error) {
+      if (!isInvalidatedContext(error)) console.warn("Could not resume cloud sync:", error);
+    }
   });
 
   function getVideoId() {
@@ -163,15 +166,9 @@
     }
 
     try {
-      if (cachedListens === null) {
-        const stored = await chrome.storage.local.get(STORAGE_KEY);
-        if (cachedListens === null) {
-          cachedListens = Array.isArray(stored[STORAGE_KEY]?.listens) ? stored[STORAGE_KEY].listens : [];
-        }
-      }
+      const result = await chrome.runtime.sendMessage({ type: "get-play-count", trackKey: details.trackKey });
       if (requestId !== badgeRequestId || videoId !== currentVideoId) return;
-      const count = cachedListens.filter((item) => item.trackKey === details.trackKey).length;
-      renderPlayCountBadge(count, details.title);
+      if (result?.ok) renderPlayCountBadge(Number(result.count) || 0, details.title);
     } catch (error) {
       if (!isInvalidatedContext(error)) console.warn("Could not read the local play count:", error);
     }
@@ -183,10 +180,11 @@
 
   function sendListen(details) {
     try {
-      chrome.runtime.sendMessage({ type: "record-listen", ...details }, () => {
+      chrome.runtime.sendMessage({ type: "record-listen", ...details }, (result) => {
         try {
           const error = chrome.runtime.lastError;
           if (error && !isInvalidatedContext(error)) console.warn("Could not record listen:", error.message);
+          if (!error && result?.ok) scheduleBadgeUpdate();
         } catch (error) {
           if (!isInvalidatedContext(error)) console.warn("Could not record listen:", error);
         }

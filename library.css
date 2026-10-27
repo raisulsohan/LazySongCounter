@@ -146,6 +146,62 @@ h2 {
   margin-bottom: 20px;
 }
 
+.cloud-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin: 0 0 14px;
+  padding: 13px 15px;
+  border: 1px solid #342d45;
+  border-radius: 14px;
+  background: linear-gradient(110deg, rgba(47, 37, 70, .75), rgba(27, 24, 38, .9));
+}
+
+.cloud-panel .cloud-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cloud-panel .cloud-copy strong {
+  color: #eee8ff;
+  font-size: 13px;
+}
+
+.cloud-panel .cloud-copy span {
+  color: #9e97ad;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.cloud-panel .cloud-actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 7px;
+}
+
+.cloud-panel .cloud-actions button {
+  padding: 8px 11px;
+  border: 1px solid #594777;
+  border-radius: 9px;
+  background: #282139;
+  color: #d4c6ff;
+  font-size: 11px;
+}
+
+.cloud-panel .cloud-actions button:hover:not(:disabled) {
+  border-color: #8364c5;
+  background: #35294e;
+  color: #fff;
+}
+
+.cloud-panel .cloud-actions button:disabled {
+  cursor: default;
+  opacity: .48;
+}
+
 .stat-card {
   display: flex;
   min-height: 125px;
@@ -476,6 +532,12 @@ h2 {
 
   .stats-grid {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .cloud-panel {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
   }
 
   .stat-card:last-child {
