@@ -17,7 +17,7 @@ Open the extension popup to see listening totals and your top five songs. Click 
 - Videos with the same normalized title are grouped together.
 - A play counts after 30 seconds. Videos shorter than 60 seconds count after half their duration.
 - Pausing and resuming does not create another play. Replaying or looping a song starts a new play session.
-- The browser keeps the latest 10,000 plays locally. With Google cloud backup enabled, history is merged with your Firestore account and synced across Chrome profiles.
+- The browser keeps the latest 1,000,000 plays locally. With Google cloud backup enabled, history is merged with your Firestore account and synced across Chrome profiles. The extension requests Chrome's `unlimitedStorage` permission for this history size; Firestore cloud usage remains subject to the project's quotas and billing plan.
 
 ## Local date and weather
 
@@ -36,7 +36,7 @@ Cloud backup uses Firebase Authentication, Cloud Firestore, and Chrome's Google 
 5. In Google Cloud Console, create an OAuth client ID with application type **Chrome Extension** and register that extension ID. Copy the client ID into `manifest.json`, replacing `YOUR_CHROME_EXTENSION_OAUTH_CLIENT_ID.apps.googleusercontent.com`.
 6. Reload the extension in `chrome://extensions`, refresh open YouTube tabs, then click **Connect** in the extension and choose your Google account.
 
-On the first sign-in, existing local plays are merged with that account's cloud history. The latest 10,000 plays are kept in both the browser and cloud. New plays sync in the background; a full sync runs at sign-in, on **Sync now**, and at most once every eight hours when Chrome starts. Signing out leaves the cloud copy in place. **Clear history** removes history from both the browser and the connected account.
+On the first sign-in, existing local plays are merged with that account's cloud history. Up to the latest 1,000,000 plays are kept in the browser and cloud. New plays sync in the background; a full sync runs at sign-in, on **Sync now**, and at most once every eight hours when Chrome starts. Signing out leaves the cloud copy in place. **Clear history** removes history from both the browser and the connected account. Large Firestore histories can exceed the free daily read/write quotas; check the project's billing plan before relying on million-play cloud sync.
 
 `firebase-config.js` contains public Web app identifiers. Do not put a service account JSON file, private key, or OAuth client secret in the extension or this repository.
 

@@ -3,7 +3,7 @@ importScripts("firebase-config.js");
 const STORAGE_KEY = "lazySongCounterData";
 const AUTH_KEY = "lazySongCounterAuth";
 const CLOUD_STATE_KEY = "lazySongCounterCloudState";
-const MAX_LISTENS = 10000;
+const MAX_LISTENS = 1000000;
 const FIREBASE_CONFIG = self.LSC_FIREBASE_CONFIG || {};
 
 let writeQueue = Promise.resolve();
