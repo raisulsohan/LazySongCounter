@@ -1,6 +1,6 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const History = require("../history-store.js");
+const History = require("../extension/history-store.js");
 
 // In-memory stand-in for chrome.storage.local. Values are copied like the real API does.
 function createArea(initial = {}) {

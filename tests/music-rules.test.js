@@ -1,6 +1,6 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const Rules = require("../music-rules.js");
+const Rules = require("../extension/music-rules.js");
 
 test("upload labels do not split one song into several tracks", () => {
   const key = Rules.trackKeyFor("Adele - Hello (Official Music Video)", "AdeleVEVO");

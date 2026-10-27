@@ -6,7 +6,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
 
-const ROOT = path.join(__dirname, "..");
+const ROOT = path.join(__dirname, "..", "extension");
 const PROJECT = "test-project";
 const DB = `projects/${PROJECT}/databases/(default)/documents`;
 const UID = "user-1";
