@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Song Library — Lazy Song Counter</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="icons/icon32.png">
+    <link rel="stylesheet" href="library.css">
+  </head>
+  <body>
+    <main class="page">
+      <header class="header">
+        <div class="brand-mark" aria-hidden="true"><span></span></div>
+        <div class="brand-copy">
+          <p class="eyebrow">LAZY SONG COUNTER</p>
+          <h1>Song Library</h1>
+        </div>
+        <a class="youtube-link" href="https://www.youtube.com/" target="_blank" rel="noreferrer">Open YouTube ↗</a>
+      </header>
+
+      <section class="intro">
+        <div>
+          <p class="eyebrow">YOUR LISTENING HISTORY</p>
+          <h2>All tracks</h2>
+          <p class="subtitle">Browse and search every track you've listened to.</p>
+        </div>
+        <span class="period-chip" id="period-chip">Today</span>
+      </section>
+
+      <section class="stats-grid" aria-label="Listening summary">
+        <article class="stat-card">
+          <span class="stat-label" id="summary-period">Listens today</span>
+          <strong id="total-listens">0</strong>
+          <span class="stat-caption">plays recorded</span>
+        </article>
+        <article class="stat-card">
+          <span class="stat-label">Unique tracks</span>
+          <strong id="unique-tracks">0</strong>
+          <span class="stat-caption">in this period</span>
+        </article>
+        <article class="stat-card accent-card">
+          <span class="stat-label">History limit</span>
+          <strong>10,000</strong>
+          <span class="stat-caption">most recent plays saved</span>
+        </article>
+      </section>
+
+      <section class="library-panel">
+        <div class="toolbar">
+          <nav class="periods" aria-label="Filter by time period">
+            <button type="button" data-period="daily" class="active">Today</button>
+            <button type="button" data-period="weekly">Week</button>
+            <button type="button" data-period="monthly">Month</button>
+            <button type="button" data-period="yearly">Year</button>
+            <button type="button" data-period="all">All time</button>
+          </nav>
+          <label class="search-box">
+            <span aria-hidden="true">⌕</span>
+            <input id="search" type="search" placeholder="Search tracks or channels" autocomplete="off">
+          </label>
+        </div>
+
+        <div class="results-bar">
+          <strong id="result-count">0 tracks</strong>
+          <span id="range-label">No tracks found</span>
+        </div>
+
+        <div class="table-heading" aria-hidden="true">
+          <span>#</span>
+          <span>Track</span>
+          <span>Plays</span>
+          <span>Last played</span>
+        </div>
+        <div id="track-list" class="track-list" aria-live="polite"></div>
+        <div id="empty-state" class="empty-state" hidden>
+          <div class="empty-disc" aria-hidden="true">♫</div>
+          <strong id="empty-title">No tracks found</strong>
+          <p id="empty-description">Try another time period or search term.</p>
+        </div>
+
+        <div class="pagination">
+          <span id="page-range">Showing 0 tracks</span>
+          <div class="page-controls">
+            <button id="previous-page" type="button" aria-label="Previous page">← Previous</button>
+            <span id="page-number">Page 1 of 1</span>
+            <button id="next-page" type="button" aria-label="Next page">Next →</button>
+          </div>
+        </div>
+      </section>
+
+      <footer class="footer">
+        <span>Only YouTube videos marked as Music are counted. A play counts after 30 seconds, or half the song if it is under 60 seconds. History stays in this browser.</span>
+        <span class="creator">Created by <a href="https://raisulsohan.com/en/portfolio/" target="_blank" rel="noreferrer">Raisul Sohan</a></span>
+      </footer>
+    </main>
+    <script src="library.js"></script>
+  </body>
+</html>

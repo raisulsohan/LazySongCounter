@@ -1,0 +1,196 @@
+(() => {
+  let currentVideoId = "";
+  let currentVideo = null;
+  let session = null;
+  let syncTimer = 0;
+  const categoriesByVideoId = new Map();
+
+  window.addEventListener("message", (event) => {
+    if (event.source !== window || event.origin !== location.origin) return;
+    const message = event.data;
+    if (message?.source !== "lazy-song-counter" || message.type !== "video-category") return;
+    if (typeof message.videoId !== "string" || typeof message.category !== "string") return;
+    categoriesByVideoId.set(message.videoId, message.category);
+    if (categoriesByVideoId.size > 100) {
+      const oldestVideoId = categoriesByVideoId.keys().next().value;
+      categoriesByVideoId.delete(oldestVideoId);
+    }
+  });
+
+  function getVideoId() {
+    const url = new URL(location.href);
+    const fromQuery = url.searchParams.get("v");
+    if (fromQuery) return fromQuery;
+
+    const match = url.pathname.match(/^\/(?:shorts|live)\/([^/?]+)/);
+    return match?.[1] || "";
+  }
+
+  function getVideoElement() {
+    return document.querySelector("video.html5-main-video") || document.querySelector("video");
+  }
+
+  function cleanTitle(value) {
+    return String(value || "")
+      .replace(/\s*[-|]\s*YouTube(?: Music)?\s*$/i, "")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function getTrackDetails(videoId) {
+    const title = cleanTitle(
+      document.querySelector("ytd-watch-metadata h1 yt-formatted-string")?.textContent ||
+      document.querySelector('meta[name="title"]')?.content ||
+      document.title
+    );
+    const channel = (document.querySelector("ytd-watch-metadata ytd-channel-name a")?.textContent ||
+      document.querySelector(".ytmusic-player-bar yt-formatted-string")?.textContent || "")
+      .replace(/\s+/g, " ")
+      .trim();
+    const normalizedTitle = title
+      .normalize("NFKC")
+      .toLocaleLowerCase()
+      .replace(/[\[\](){}.,!?\-_:;"'’]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    return {
+      title,
+      channel,
+      videoId,
+      trackKey: normalizedTitle || videoId
+    };
+  }
+
+  function isClearlyNonSongTitle(title) {
+    return /\b(?:podcast|reaction|reacts?|review|tutorial|lesson|interview|commentary|analysis|breakdown|documentary|vlog|full album|playlist|compilation|mixtape|behind the scenes|making of|how to)\b|রিভিউ|রিঅ্যাকশন|টিউটোরিয়াল|সাক্ষাৎকার|পডকাস্ট|বিশ্লেষণ|ডকুমেন্টারি|ভ্লগ/i.test(title);
+  }
+
+  function isAdPlaying() {
+    const player = document.querySelector("#movie_player");
+    return Boolean(player?.classList.contains("ad-showing") || player?.classList.contains("ad-interrupting"));
+  }
+
+  function thresholdFor(video) {
+    const duration = Number(video.duration);
+    if (!Number.isFinite(duration) || duration <= 0) return 30;
+    return Math.max(2, Math.min(30, duration * 0.5));
+  }
+
+  function isPlaybackWrap(previousTime, currentTime, video) {
+    const duration = Number(video.duration);
+    if (!Number.isFinite(duration) || duration <= 0 || currentTime >= previousTime) return false;
+
+    const edgeWindow = Math.min(8, Math.max(2, duration * 0.02));
+    return previousTime >= duration - edgeWindow && currentTime <= edgeWindow;
+  }
+
+  function startNextLoop(currentTime) {
+    session = {
+      playedSeconds: 0,
+      counted: false,
+      notMusic: false,
+      lastTime: currentTime
+    };
+  }
+
+  function onTimeUpdate() {
+    if (!currentVideo || !session) return;
+
+    const now = currentVideo.currentTime;
+    if (isPlaybackWrap(session.lastTime, now, currentVideo)) {
+      startNextLoop(now);
+      return;
+    }
+
+    const delta = now - session.lastTime;
+    session.lastTime = now;
+
+    if (currentVideo.paused || isAdPlaying() || delta <= 0 || delta > 3 || session.counted || session.notMusic) return;
+
+    session.playedSeconds += delta;
+    if (session.playedSeconds < thresholdFor(currentVideo)) return;
+
+    const category = categoriesByVideoId.get(currentVideoId);
+    if (!category) return;
+    if (category.trim().toLocaleLowerCase() !== "music") {
+      session.notMusic = true;
+      return;
+    }
+
+    const details = getTrackDetails(currentVideoId);
+    if (!details.title) return;
+    if (isClearlyNonSongTitle(details.title)) {
+      session.notMusic = true;
+      return;
+    }
+
+    session.counted = true;
+    chrome.runtime.sendMessage({ type: "record-listen", ...details }, () => {
+      // Reading lastError here prevents an unhandled extension messaging error
+      // if the service worker is reloading or the extension is being updated.
+      void chrome.runtime.lastError;
+    });
+  }
+
+  function onSeeking() {
+    if (!currentVideo || !session) return;
+    const now = currentVideo.currentTime;
+    if (isPlaybackWrap(session.lastTime, now, currentVideo)) {
+      startNextLoop(now);
+      return;
+    }
+    session.lastTime = now;
+  }
+
+  function onEnded() {
+    if (!session) return;
+    session = { playedSeconds: 0, counted: false, notMusic: false, lastTime: 0 };
+  }
+
+  function detachVideo() {
+    if (!currentVideo) return;
+    currentVideo.removeEventListener("timeupdate", onTimeUpdate);
+    currentVideo.removeEventListener("seeking", onSeeking);
+    currentVideo.removeEventListener("ended", onEnded);
+    currentVideo = null;
+  }
+
+  function syncPlayer() {
+    const videoId = getVideoId();
+    const video = getVideoElement();
+    if (!videoId || !video) return;
+
+    const sameTrack = videoId === currentVideoId;
+    if (!sameTrack) {
+      currentVideoId = videoId;
+      session = { playedSeconds: 0, counted: false, notMusic: false, lastTime: video.currentTime || 0 };
+    }
+
+    if (video === currentVideo) return;
+    if (sameTrack && currentVideo && session && isPlaybackWrap(currentVideo.currentTime, video.currentTime, video)) {
+      startNextLoop(video.currentTime || 0);
+    }
+    detachVideo();
+    currentVideo = video;
+    if (!session) session = { playedSeconds: 0, counted: false, notMusic: false, lastTime: video.currentTime || 0 };
+    session.lastTime = video.currentTime || 0;
+    video.addEventListener("timeupdate", onTimeUpdate);
+    video.addEventListener("seeking", onSeeking);
+    video.addEventListener("ended", onEnded);
+  }
+
+  function scheduleSync() {
+    window.clearTimeout(syncTimer);
+    syncTimer = window.setTimeout(syncPlayer, 120);
+  }
+
+  document.addEventListener("yt-navigate-finish", scheduleSync);
+  document.addEventListener("yt-page-data-updated", scheduleSync);
+  window.addEventListener("popstate", scheduleSync);
+  new MutationObserver(scheduleSync).observe(document.documentElement, {
+    childList: true,
+    subtree: true
+  });
+  syncPlayer();
+})();

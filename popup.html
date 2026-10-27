@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Lazy Song Counter</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="icons/icon32.png">
+    <link rel="stylesheet" href="popup.css">
+  </head>
+  <body>
+    <main class="app">
+      <header class="header">
+        <div class="brand-mark" aria-hidden="true"><span></span></div>
+        <div class="brand-copy">
+          <p class="eyebrow">YOUR LISTENING STATS</p>
+          <h1>Song Counter</h1>
+        </div>
+        <button class="icon-button" id="refresh" type="button" aria-label="Refresh" title="Refresh">↻</button>
+      </header>
+
+      <section class="summary" aria-label="Listening summary">
+        <div class="summary-main">
+          <span class="summary-label" id="summary-period">Listens today</span>
+          <strong id="total-listens">0</strong>
+          <span class="summary-caption">plays recorded</span>
+        </div>
+        <div class="summary-side">
+          <span class="summary-icon" aria-hidden="true">♫</span>
+          <strong id="unique-tracks">0</strong>
+          <span>tracks</span>
+        </div>
+      </section>
+
+      <nav class="periods" aria-label="Choose a time period">
+        <button type="button" data-period="daily" class="active">Today</button>
+        <button type="button" data-period="weekly">Week</button>
+        <button type="button" data-period="monthly">Month</button>
+        <button type="button" data-period="yearly">Year</button>
+        <button type="button" data-period="all">All</button>
+      </nav>
+
+      <section class="ranking-section">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">YOUR FAVORITES</p>
+            <h2>Most played</h2>
+          </div>
+          <span class="period-chip" id="period-chip">Today</span>
+        </div>
+
+        <div id="track-list" class="track-list" aria-live="polite"></div>
+        <button type="button" id="view-all" class="view-all" hidden>View full list</button>
+        <div id="empty-state" class="empty-state" hidden>
+          <div class="empty-disc" aria-hidden="true">♫</div>
+          <strong>No songs counted yet</strong>
+          <p>Play a song in YouTube's Music category. It will appear here after 30 seconds of listening.</p>
+        </div>
+      </section>
+
+      <footer class="footer">
+        <p class="creator">Created by <a href="https://raisulsohan.com/en/portfolio/" target="_blank" rel="noreferrer">Raisul Sohan</a></p>
+        <button type="button" id="clear-history">Clear history</button>
+      </footer>
+      <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    </main>
+    <script src="popup.js"></script>
+  </body>
+</html>
